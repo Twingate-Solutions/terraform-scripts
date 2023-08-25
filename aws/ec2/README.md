@@ -1,7 +1,7 @@
 # Acknowledgements / limitations
 * When running this script as is, using the default AWS NAT gateway, Peer-to-Peer connections will not work. This is currently unsupported through the default AWS NAT gateway. An alternative solution is to use [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/).
 
-# HOW TO USE
+# How to use the script
 1. AWS Credentials (export or terraform.tfvars)
     - Choose 1 of the following methods for adding AWS credentials:
         - **Export to terminal/shell:** copy and paste to terminal/shell from AWS console (command line or programmatic access)
