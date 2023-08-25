@@ -29,6 +29,8 @@ data "aws_ami" "twingate" {
 }
 
 # Create a new AWS instance, using the latest Twingate AMI from above, to deploy the Connector
+# => Public subnet deployment
+/*
 resource "aws_instance" "twingate_connector" {
     ami             = data.aws_ami.twingate.id
     instance_type   = "t3a.micro"
@@ -50,6 +52,36 @@ resource "aws_instance" "twingate_connector" {
   EOT
 
   subnet_id         = aws_subnet.public.id
+
+  tags = {
+    Name            = twingate_connector.tf_demo_aws_connector.name
+    Environment     = var.app_environment
+  }
+}
+*/
+
+# => Private subnet deployment
+resource "aws_instance" "twingate_connector" {
+    ami             = data.aws_ami.twingate.id
+    instance_type   = "t3a.micro"
+    key_name        = aws_key_pair.ssh_access_key.key_name
+    depends_on      = [aws_nat_gateway.aws-ngw]
+
+    user_data       = <<-EOT
+    #! /bin/bash
+    set -e
+    sudo mkdir -p /etc/twingate/
+    {
+      echo TWINGATE_NETWORK="${var.tg_network}"
+      echo TWINGATE_ACCESS_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.access_token}"
+      echo TWINGATE_REFRESH_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.refresh_token}"
+      echo TWINGATE_LOG_ANALYTICS="${var.tg_log_analytics_version}"
+      echo TWINGATE_LOG_LEVEL="${var.tg_log_level}"
+    } > /etc/twingate/connector.conf
+    sudo systemctl enable --now twingate-connector
+  EOT
+
+  subnet_id         = aws_subnet.private.id
 
   tags = {
     Name            = twingate_connector.tf_demo_aws_connector.name
