@@ -36,6 +36,8 @@ resource "aws_instance" "twingate_connector" {
     instance_type   = "t3a.micro"
     associate_public_ip_address = true
     key_name        = aws_key_pair.ssh_access_key.key_name
+    subnet_id       = aws_subnet.public.id
+    security_groups = [aws_security_group.connector_sg.id]
 
     user_data       = <<-EOT
     #! /bin/bash
@@ -51,8 +53,6 @@ resource "aws_instance" "twingate_connector" {
     sudo systemctl enable --now twingate-connector
   EOT
 
-  subnet_id         = aws_subnet.public.id
-
   tags = {
     Name            = twingate_connector.tf_demo_aws_connector.name
     Environment     = var.app_environment
@@ -65,6 +65,8 @@ resource "aws_instance" "twingate_connector" {
     ami             = data.aws_ami.twingate.id
     instance_type   = "t3a.micro"
     key_name        = aws_key_pair.ssh_access_key.key_name
+    subnet_id       = aws_subnet.private.id
+    security_groups = [aws_security_group.connector_sg.id]
     depends_on      = [aws_nat_gateway.aws-ngw]
 
     user_data       = <<-EOT
@@ -80,8 +82,6 @@ resource "aws_instance" "twingate_connector" {
     } > /etc/twingate/connector.conf
     sudo systemctl enable --now twingate-connector
   EOT
-
-  subnet_id         = aws_subnet.private.id
 
   tags = {
     Name            = twingate_connector.tf_demo_aws_connector.name
@@ -117,6 +117,8 @@ resource "aws_instance" "private_resource" {
     ami             = data.aws_ami.ubuntu.id
     instance_type   = "t2.micro"
     key_name        = aws_key_pair.ssh_access_key.key_name
+    subnet_id       = aws_subnet.private.id
+    security_groups = [aws_security_group.resource_sg.id]
     depends_on      = [aws_nat_gateway.aws-ngw]
     
     user_data       = <<-EOT
@@ -124,8 +126,6 @@ resource "aws_instance" "private_resource" {
     sudo apt update
     sudo apt install apache2 -y
     EOT
-
-    subnet_id       = aws_subnet.private.id
 
     tags = {
         Name        = "${var.app_name}-VM"

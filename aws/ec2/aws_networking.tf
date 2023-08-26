@@ -178,9 +178,9 @@ resource "aws_nat_gateway" "aws-ngw" {
 #
 ##############################################################
 
-# Create VPC security group with outbound rules for the connector
-resource "aws_security_group" "vpc_sg" {                                 
-  name                    = "${var.app_name}-vpc-sg"
+# Create security group for connector
+resource "aws_security_group" "connector_sg" {                                 
+  name                    = "${var.app_name}-connector-sg"
   vpc_id                  = aws_vpc.default.id
 
   egress {
@@ -201,6 +201,48 @@ resource "aws_security_group" "vpc_sg" {
     protocol              = "udp"
     from_port             = 0
     to_port               = 65535
+    cidr_blocks           = ["0.0.0.0/0"]
+  }
+
+  # the following egress rules are included for the purposes of this demo
+  egress {
+    protocol              = "icmp"
+    from_port             = 8
+    to_port               = 0
+    cidr_blocks           = ["0.0.0.0/0"]
+  }
+
+  egress {
+    protocol              = "tcp"
+    from_port             = 22
+    to_port               = 22
+    cidr_blocks           = ["0.0.0.0/0"]
+  }
+
+  egress {
+    protocol              = "tcp"
+    from_port             = 80
+    to_port               = 80
+    cidr_blocks           = ["0.0.0.0/0"]
+  }
+}
+
+# Create security group for private resource
+resource "aws_security_group" "resource_sg" {                                 
+  name                    = "${var.app_name}-resource-sg"
+  vpc_id                  = aws_vpc.default.id
+
+  ingress {
+    protocol              = "-1"
+    from_port             = 0
+    to_port               = 0
+    cidr_blocks           = ["0.0.0.0/0"]
+  }
+
+  egress {
+    protocol              = "-1"
+    from_port             = 0
+    to_port               = 0
     cidr_blocks           = ["0.0.0.0/0"]
   }
 }
