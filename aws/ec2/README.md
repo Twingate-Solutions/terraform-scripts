@@ -1,5 +1,5 @@
 # Acknowledgements / limitations
-* When running this script as is, using the default AWS NAT gateway, Peer-to-Peer connections will not work. This is currently unsupported through the default AWS NAT gateway. An alternative solution is to use [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/).
+* When running this script as is, using the default AWS NAT gateway, Peer-to-Peer connections will not work. AWS's default NAT gateway does not currently support direct connect. An alternative, cost-effective solution is to use [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/).
 
 # How to use the script
 1. AWS Credentials (export or terraform.tfvars)
@@ -28,10 +28,10 @@
 
 4. Decide whether you want to deploy connector in a private or public subnet (lines 31:89 in aws_ec2.tf). Diagrams provided for both private and public subnet deployments.
 
-5. Terraform init       (pull the required dependencies)
-6. Terraform plan       (plan out what will be implemented and check for errors)
-7. Terraform apply      (apply the plan)
-8. Terraform destroy    (tear down the infrastructure when finished)
+5. `Terraform init`       (pull the required dependencies)
+6. `Terraform plan`       (plan out what will be implemented and check for errors)
+7. `Terraform apply`      (apply the plan)
+8. `Terraform destroy`    (tear down the infrastructure when finished)
 
 # Accessing the Resource
 * Ensure you are logged into the client with access to the Twingate network specified
