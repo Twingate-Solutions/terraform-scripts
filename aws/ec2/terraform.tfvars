@@ -31,4 +31,4 @@ tg_users                    = ["",""]
 
 # Twingate connector details (remove tg_log_level if debug logging isn't needed)
 tg_log_analytics_version    = "v2"
-tg_log_level                = "7"     
+tg_log_level                = "3"     # The default is 3, but can be set to 7 for debug
