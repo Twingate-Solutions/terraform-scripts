@@ -72,6 +72,17 @@ resource "twingate_group" "tf_demo_aws_group" {
 
 ##############################################################
 #
+# Security Policy
+#
+##############################################################
+
+# Grab existing security policy
+data "twingate_security_policy" "trusted-30day-nomfa" {
+    name = "TRUSTED-30DAY-NOMFA"
+}
+
+##############################################################
+#
 # Resource
 #
 ##############################################################
@@ -82,13 +93,15 @@ resource "twingate_resource" "tf_demo_aws_resource" {
     address                     = aws_instance.private_resource.private_ip
     remote_network_id           = twingate_remote_network.tf_demo_aws_network.id
 
-    protocols {
+    security_policy_id          = data.twingate_security_policy.trusted-30day-nomfa
+
+    protocols = {
         allow_icmp              = true
-        tcp {
+        tcp = {
             policy              = "RESTRICTED"
             ports               = ["22", "80"]
         }
-        udp {
+        udp = {
             policy              = "ALLOW_ALL"
         }
     }
@@ -101,4 +114,6 @@ resource "twingate_resource" "tf_demo_aws_resource" {
     alias                       = "tf-demo-aws.server"
     is_browser_shortcut_enabled = true
     is_visible                  = true
+    is_active                   = true
+    is_authoritative            = true
 }
