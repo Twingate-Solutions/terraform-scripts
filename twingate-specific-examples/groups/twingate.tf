@@ -90,3 +90,29 @@ resource "twingate_resource" "resource" {
         group_ids = var.tg_group_ids
     }
 }
+
+##############################################################
+#
+# Example 4 - Add a list of users (by email) to a new
+#             group in Twingate
+#
+##############################################################
+
+# create users from list in variables.tf
+resource "twingate_user" "tg_users_email" {
+    for_each = toset(var.tg_users_email)
+    email = "${each.value}"
+    role = "MEMBER"
+    send_invite = true
+}
+
+# (Optional) - output ids after user creation
+output "tg_users_email_output" {
+    value = values(twingate_user.tg_users_email)[*].id
+}
+
+# create a new group and add all the users in via their recently created ids
+resource "twingate_group" "tg_users_email_group" {
+    name = "GroupA"
+    user_ids = values(twingate_user.tg_users_email)[*].id
+}
