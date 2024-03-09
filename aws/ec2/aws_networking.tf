@@ -146,7 +146,7 @@ resource "aws_internet_gateway" "aws-igw" {
 
 # Create an EIP for the NAT gateway to use
 resource "aws_eip" "aws_eip" {
-    domain                = aws_vpc.default.id
+    domain                = "vpc"
     depends_on            = [aws_internet_gateway.aws-igw]
 
     tags = {
