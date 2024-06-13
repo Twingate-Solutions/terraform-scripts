@@ -26,7 +26,6 @@ resource "aws_ecs_task_definition" "twingate_connectors" {
 
   container_definitions = jsonencode([
     {
-      #name  = "${var.app_name}-ecs-connector-1"
       name  = twingate_connector.connector_1.name
       image = "twingate/connector:1"
       essential = true
@@ -56,7 +55,6 @@ resource "aws_ecs_task_definition" "twingate_connectors" {
       ]
     },
     {
-      #name  = "${var.app_name}-ecs-connector-2"
       name  = twingate_connector.connector_2.name
       image = "twingate/connector:1"
       essential = true
