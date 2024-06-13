@@ -128,7 +128,7 @@ resource "twingate_resource" "tf_demo_aws_resource" {
     }
 
     alias                       = "static-site.int"
-    #is_browser_shortcut_enabled = true
+    is_browser_shortcut_enabled = true
     is_visible                  = true
     is_active                   = true
     is_authoritative            = true
