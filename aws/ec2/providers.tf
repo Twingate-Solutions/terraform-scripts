@@ -9,11 +9,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.63.1"
     }
     twingate = {
       source  = "twingate/twingate"
-      version = "2.0.0"
+      version = "3.0.10"
     }
   }
 }

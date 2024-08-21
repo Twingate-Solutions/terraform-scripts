@@ -1,17 +1,5 @@
 ##############################################################
 #
-# SSH Key Pair
-#
-##############################################################
-
-// Add ssh access key => see README.md for instructions
-resource "aws_key_pair" "ssh_access_key" {
-    key_name        = "${var.app_name}-ssh-key-pair"
-    public_key      = file("~/.ssh/aws_id_rsa.pub")
-}
-
-##############################################################
-#
 # Twingate Connector Instance
 #
 ##############################################################
@@ -35,7 +23,7 @@ resource "aws_instance" "twingate_connector" {
     ami             = data.aws_ami.twingate.id
     instance_type   = "t3a.micro"
     associate_public_ip_address = true
-    key_name        = aws_key_pair.ssh_access_key.key_name
+    key_name        = var.aws_ssh_key_pair
     subnet_id       = aws_subnet.public.id
     security_groups = [aws_security_group.connector_sg.id]
 
@@ -64,7 +52,7 @@ resource "aws_instance" "twingate_connector" {
 resource "aws_instance" "twingate_connector" {
     ami             = data.aws_ami.twingate.id
     instance_type   = "t3a.micro"
-    key_name        = aws_key_pair.ssh_access_key.key_name
+    key_name        = var.aws_ssh_key_pair
     subnet_id       = aws_subnet.private.id
     security_groups = [aws_security_group.connector_sg.id]
     depends_on      = [aws_nat_gateway.aws-ngw]
@@ -116,7 +104,7 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "private_resource" {
     ami             = data.aws_ami.ubuntu.id
     instance_type   = "t2.micro"
-    key_name        = aws_key_pair.ssh_access_key.key_name
+    key_name        = var.aws_ssh_key_pair
     subnet_id       = aws_subnet.private.id
     security_groups = [aws_security_group.resource_sg.id]
     depends_on      = [aws_nat_gateway.aws-ngw]

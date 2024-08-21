@@ -12,7 +12,10 @@ app_environment             = "demo"
 aws_region                  = "ca-central-1"                       
 
 # VPC
-aws_vpc_cidr_block          = "10.37.0.0/16"                      
+aws_vpc_cidr_block          = "10.37.0.0/16"        
+
+# Existing SSH key
+aws_ssh_key_pair            = "my-key-pair"
 
 ##############################################################
 #
@@ -28,6 +31,9 @@ tg_network                  = ""
 
 # Twingate users allowed access to connector + private resource (pulled from URL in Twingate admin console, i.e. ["VXNabc=", "VXNdef="] from twindemo.twingate.com/users/VXNabc=)
 tg_users                    = ["",""]                                  
+
+# Example existing Twingate groups
+tg_eng_group                = ""
 
 # Twingate connector details (remove tg_log_level if debug logging isn't needed)
 tg_log_analytics_version    = "v2"

@@ -64,9 +64,30 @@ output "picked_everyone_group_id" {
     value                       = data.twingate_groups.everyone.groups[0].id
 }
 
+# Pull in an existing group from id
+data "twingate_group" "tf_demo_eng" {
+    id                        = var.tg_eng_group
+}
+
+# Pull in an existing group from filter
+data "twingate_groups" "tf_demo_security" {
+    name = "Security"
+}
+
+# Pull in an existing group from filter
+data "twingate_groups" "tf_demo_it" {
+    name = "IT"
+}
+
 # Create a demo group and add users to the group
-resource "twingate_group" "tf_demo_aws_group" {
-    name                        = "TF Demo - AWS Group"
+resource "twingate_group" "tf_demo_admins" {
+    name                        = "TF Demo - Admins"
+    user_ids                    = var.tg_users
+}
+
+# Create a demo group and add users to the group
+resource "twingate_group" "tf_demo_devops" {
+    name                        = "TF Demo - Devops"
     user_ids                    = var.tg_users
 }
 
@@ -77,8 +98,8 @@ resource "twingate_group" "tf_demo_aws_group" {
 ##############################################################
 
 # Grab existing security policy
-data "twingate_security_policy" "trusted-30day-nomfa" {
-    name = "TRUSTED-30DAY-NOMFA"
+data "twingate_security_policy" "tf_demo_trusted-30day-nomfa" {
+    name = "Trusted-30Day-noMFA"
 }
 
 ##############################################################
@@ -93,7 +114,7 @@ resource "twingate_resource" "tf_demo_aws_resource" {
     address                     = aws_instance.private_resource.private_ip
     remote_network_id           = twingate_remote_network.tf_demo_aws_network.id
 
-    security_policy_id          = data.twingate_security_policy.trusted-30day-nomfa
+    security_policy_id          = data.twingate_security_policy.tf_demo_trusted-30day-nomfa.id
 
     protocols = {
         allow_icmp              = true
@@ -106,12 +127,46 @@ resource "twingate_resource" "tf_demo_aws_resource" {
         }
     }
 
-    access {
-        group_ids               = [twingate_group.tf_demo_aws_group.id]
-        service_account_ids     = [twingate_service_account.tf_demo_service_account.id]
+    // Adding a single group via `access_group`
+    access_group {
+        group_id                           = twingate_group.tf_demo_admins.id                                 # Assign group to resource
+        security_policy_id                 = data.twingate_security_policy.tf_demo_trusted-30day-nomfa.id     # Override default resource policy on group
+        #usage_based_autolock_duration_days = 30                                                              # Set usage based autolock policy on group
     }
 
-    alias                       = "tf-demo-aws.server"
+    // Adding multiple groups by individual ID
+    dynamic "access_group" {
+        for_each = toset([twingate_group.tf_demo_devops.id, data.twingate_group.tf_demo_eng.id])              # Loop over each group id
+        content {
+            group_id                           = access_group.value                                           # Assign groups to resource
+            security_policy_id                 = data.twingate_security_policy.tf_demo_trusted-30day-nomfa.id # Override default resource policy on groups
+            usage_based_autolock_duration_days = 30                                                           # Set usage based autolock policy on groups
+        }
+    }
+
+    // Adding multiple groups from twingate_groups data sources
+    dynamic "access_group" {
+        for_each = setunion(
+            data.twingate_groups.tf_demo_security.groups[*].id,
+            data.twingate_groups.tf_demo_it.groups[*].id,
+            // Single IDs can be added by wrapping them in a set
+            toset([data.twingate_group.tf_demo_eng.id])
+        )
+        content {
+            group_id                           = access_group.value                                           # Assign groups to resource
+            security_policy_id                 = data.twingate_security_policy.tf_demo_trusted-30day-nomfa.id # Override default resource policy on groups
+            usage_based_autolock_duration_days = 30                                                           # Set usage based autolock policy on groups
+        }
+    }
+
+    // Service acoount access is specified similarly
+    // A `for_each` block may be used like above to assign access to multiple 
+    // service accounts in a single configuration block.
+    access_service {
+        service_account_id = twingate_service_account.tf_demo_service_account.id
+    }
+
+    alias                       = "tf-demo-aws.int"
     is_browser_shortcut_enabled = true
     is_visible                  = true
     is_active                   = true

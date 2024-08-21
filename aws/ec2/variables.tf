@@ -52,6 +52,11 @@ variable "aws_vpc_cidr_block" {
   description = "AWS VPC CIDR Block"
 }
 
+variable "aws_ssh_key_pair" {
+  type        = string
+  description = "SSH key pair for EC2 instance"
+}
+
 ##############################################################
 #
 # Twingate
@@ -78,6 +83,13 @@ variable "tg_network" {
 variable "tg_users" {
   type        = set(string)
   description = "List of users that you want to assign to group for access to connector + private resource"
+}
+
+# Groups
+
+variable "tg_eng_group" {
+  type        = string
+  description = "Existing engineering group id"
 }
 
 # Connector info
