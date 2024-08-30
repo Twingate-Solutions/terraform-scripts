@@ -55,7 +55,8 @@ resource "aws_instance" "twingate_connector" {
     key_name        = var.aws_ssh_key_pair
     subnet_id       = aws_subnet.private.id
     security_groups = [aws_security_group.connector_sg.id]
-    depends_on      = [aws_nat_gateway.aws-ngw]
+    #depends_on      = [aws_nat_gateway.aws-ngw]
+    depends_on      = [aws_instance.fck-nat]
 
     user_data       = <<-EOT
     #! /bin/bash
@@ -72,7 +73,7 @@ resource "aws_instance" "twingate_connector" {
   EOT
 
   tags = {
-    Name            = twingate_connector.tf_demo_aws_connector.name
+    Name            = "${var.app_name}-${twingate_connector.tf_demo_aws_connector.name}"
     Environment     = var.app_environment
   }
 }
@@ -107,7 +108,8 @@ resource "aws_instance" "private_resource" {
     key_name        = var.aws_ssh_key_pair
     subnet_id       = aws_subnet.private.id
     security_groups = [aws_security_group.resource_sg.id]
-    depends_on      = [aws_nat_gateway.aws-ngw]
+    #depends_on      = [aws_nat_gateway.aws-ngw]
+    depends_on      = [aws_instance.fck-nat]
     
     user_data       = <<-EOT
     #! /bin/bash
@@ -116,7 +118,7 @@ resource "aws_instance" "private_resource" {
     EOT
 
     tags = {
-        Name        = "${var.app_name}-VM"
+        Name        = "${var.app_name}-private-resource"
         Environment = var.app_environment
     }
 }

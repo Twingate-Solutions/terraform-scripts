@@ -57,6 +57,32 @@ variable "aws_ssh_key_pair" {
   description = "SSH key pair for EC2 instance"
 }
 
+# VPC Peering (Optional)
+
+variable "peer_vpc_id" {
+  description = "The ID of the VPC to peer with"
+  type        = string
+  default     = null
+}
+
+variable "enable_vpc_peering" {
+  description = "Enable VPC Peering Connection"
+  type        = bool
+  default     = false
+}
+
+variable "peer_region" {
+  type        = string
+  default     = null
+  description = "Region of the VPC to peer with"
+}
+
+variable "peer_vpc_cidr_block" {
+  type        = string
+  default     = null
+  description = "Region of the VPC to peer with"
+}
+
 ##############################################################
 #
 # Twingate

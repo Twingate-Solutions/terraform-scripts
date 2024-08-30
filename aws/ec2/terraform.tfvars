@@ -9,13 +9,19 @@ app_name                    = "tg-tf-demo"
 app_environment             = "demo"                                    
 
 # Region
-aws_region                  = "ca-central-1"                       
+aws_region                  = "us-west-1"                       
 
 # VPC
 aws_vpc_cidr_block          = "10.37.0.0/16"        
 
 # Existing SSH key
-aws_ssh_key_pair            = "my-key-pair"
+aws_ssh_key_pair            = "my-key-pair-1"
+
+# VPC Peering
+enable_vpc_peering          = true
+peer_vpc_id                 = "vpc-XXXXXXXXXXXX"
+peer_region                 = "us-east-1"
+peer_vpc_cidr_block         = "10.49.0.0/16"
 
 ##############################################################
 #
@@ -24,13 +30,13 @@ aws_ssh_key_pair            = "my-key-pair"
 ##############################################################
 
 # Twingate api token (pulled from the Twingate admin console)
-tg_api_token                = ""                                      
+tg_api_token                = "<TG_KEY>"                                      
 
 # Twingate network (your tenant name, i.e. "twindemo" from twindemo.twingate.com)
-tg_network                  = ""                                     
+tg_network                  = "<TENANT>"                                     
 
 # Twingate users allowed access to connector + private resource (pulled from URL in Twingate admin console, i.e. ["VXNabc=", "VXNdef="] from twindemo.twingate.com/users/VXNabc=)
-tg_users                    = ["",""]                                  
+tg_users                    = ["VXNlcjoyXXXXXXX="]                                  
 
 # Example existing Twingate groups
 tg_eng_group                = ""

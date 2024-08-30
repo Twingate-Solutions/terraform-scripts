@@ -1,38 +1,68 @@
-# Acknowledgements / limitations
-* When running this script as is, using the default AWS NAT gateway, Peer-to-Peer connections will not work. Using peer-to-peer in AWS to expose resources securely is challenging as the default NAT gateway is not NAT traversal-friendly. An alternative, cost-effective solution is to use [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/).
+# Twingate TF Quickstart for AWS (EC2 Deployment)
 
-# How to use the script
-1. AWS Credentials (export or terraform.tfvars)
-    - Choose 1 of the following methods for adding AWS credentials:
-        - **Export to terminal/shell:** copy and paste to terminal/shell from AWS console (command line or programmatic access)
-        - **Add to terraform.tfvars:** uncomment lines 10:30 in variables.tf and lines 18:22 in providers.tf and fill out (command line or programmatic access)
+The Twingate SE team built this quickstart to serve as a guide in deploying Twingate using Terraform to AWS. This script is apply-ready OOTB and will stand up a sandbox demo environment for testing purposes. The sandbox demo environment consists of:
 
+- AWS VPC, Public & Private Subnets, Route Tables, NAT & Internet Gateways, EIPs, Security Groups, VPC Peering (Optional), & a Private Hosted Zone (Optional)
+- Twingate Remote Network, Connector, Private Resource
+
+There are two approaches to deploying Connectors for this quickstart.
+
+#### Private Subnet Deployment:
+
+![Private Subnet Deployment](./aws-ec2-cd-private.png)
+
+-or-
+
+#### Public Subnet Deployment:
+
+![Public Subnet Deployment](./aws-ec2-cd-public.png)
+
+## Important (Optional) Callouts
+
+### Peer-to-peer connectivity
+
+This script uses [fck-nat](https://fck-nat.dev/) as the NAT gateway for the Connector, since it is a cost-effective alternative to AWS's managed NAT gateway and is considered NAT traversal-friendly that supports peer-to-peer connectivity OOTB (another great alternative is [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/)). If you choose to use AWS's managed NAT gateway and require peer-to-peer connectivity, refer to Twingate's section on [What to do if your Connector is behind an incompatible NAT](https://www.twingate.com/docs/troubleshooting-p2p#what-to-do-if-your-connector-is-behind-an-incompatible-nat).
+
+### Private Hosted Zone
+
+This quickstart includes standing up a private hosted zone to resolve a FQDN within the AWS VPC by default. The address on the Twingate resource has lines commented out if an IP-based address is desired instead.
+
+### VPC Peering
+
+This quickstart also includes a VPC peering connection by default. This is useful if there is a need to connect the sandbox VPC to existing infrastructure.
+
+## How to Setup & Use
+
+1. AWS Credentials (choose either):
+
+   - **Export to terminal/shell:** copy and paste to terminal/shell from AWS console (command line or programmatic access)
+   - **Add to terraform.tfvars:** uncomment lines 10:30 in variables.tf and lines 18:22 in providers.tf and fill out (command line or programmatic access)
 
 2. Fill out terraform.tfvars
-    - Specify AWS settings
-        - Application name
-        - AWS Region
-        - VPC CIDR Block
-    - Specify Twingate settings
-        - Pull an api key from the admin console (read, write, & provision)
-        - Grab network slug (`<slug>.twingate.com`)
-        - Grab user ids that you want to use to access the connector + private resource (Admin Console -> Team -> Users -> `<USER>` -> Grab ID from URL `<slug>.twingate.com/users/<userID>`)
-        - Specify analytics version and log level
 
+   - Specify AWS settings
+     - Application name
+     - AWS Region
+     - VPC CIDR Block
+     - SSH key to use
+     - VPC peering
+   - Specify Twingate settings
+     - Pull an api key from the admin console (read, write, & provision)
+     - Grab network slug (`<slug>.twingate.com`)
+     - Grab user ids that you want to use to access the connector + private resource (Admin Console -> Team -> Users -> `<USER>` -> Grab ID from URL `<slug>.twingate.com/users/<userID>`)
+     - Specify analytics version and log level
 
-3. Generate public SSH key and align path in aws_ec2.tf to where it is stored
-    - Terminal/shell:
-        - `ssh-keygen -b 4096`
-        - `/Users/<User>/.ssh/aws_id_rsa`
-    - Update file path in aws_ec2.tf for aws_key_pair resource
+3. Decide whether you want to deploy connector in a private or public subnet (lines 19:79 in aws_ec2.tf). Diagrams provided for both [private](./aws-ec2-cd-private.png) and [public](./aws-ec2-cd-public.png) subnet deployments.
 
-4. Decide whether you want to deploy connector in a private or public subnet (lines 31:89 in aws_ec2.tf). Diagrams provided for both private and public subnet deployments.
+4. Run the script
+   - `Terraform init` (pull the required dependencies)
+   - `Terraform plan` (plan out what will be implemented and check for errors)
+   - `Terraform apply` (apply the plan)
+5. Remove the instructure when finished
+   - `Terraform destroy` (tear down the infrastructure when finished)
 
-5. `Terraform init`       (pull the required dependencies)
-6. `Terraform plan`       (plan out what will be implemented and check for errors)
-7. `Terraform apply`      (apply the plan)
-8. `Terraform destroy`    (tear down the infrastructure when finished)
+## Accessing the Resource
 
-# Accessing the Resource
-* Ensure you are logged into the client with access to the Twingate network specified
-* `ssh -i ~/.ssh/aws_id_rsa ubuntu@tf-demo-aws.server` (may require adjustment of known_hosts file or specifying an IP as the destination - the IPs change on VM startup if terraform destroy/apply are used)
+- Ensure you are logged into the client with access to the Twingate network specified
+- SSH = `ssh -i ~/.ssh/<your_key_here> ubuntu@tg-tf-demo.int` (swap for your SSH key)
+- Web = Navigate to `tg-tf-demo.int` in your browser
