@@ -54,11 +54,13 @@ This quickstart also includes a VPC peering connection by default. This is usefu
 
 3. Decide whether you want to deploy connector in a private or public subnet (lines 19:79 in aws_ec2.tf). Diagrams provided for both [private](./aws-ec2-cd-private.png) and [public](./aws-ec2-cd-public.png) subnet deployments.
 
-4. Run the script
+4. Create a Policy in the Twingate admin console named `Trusted-30Day-noMFA` to work with the existing data source in the script (otherwise change it to one that exists in your tenant)
+
+5. Run the script
    - `Terraform init` (pull the required dependencies)
    - `Terraform plan` (plan out what will be implemented and check for errors)
    - `Terraform apply` (apply the plan)
-5. Remove the instructure when finished
+6. Remove the instructure when finished
    - `Terraform destroy` (tear down the infrastructure when finished)
 
 ## Accessing the Resource
