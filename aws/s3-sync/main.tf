@@ -24,15 +24,8 @@ resource "aws_iam_policy" "twingate_s3_sync" {
         Effect   = "Allow"
         Action   = ["s3:PutObject"]
         Resource = ["${local.bucket_arn}/*"]
-      },
-      # Include KMS permissions if encryption is enabled
-      length(var.kms_key_arn) > 0 ? {
-        Sid      = "AllowKMS"
-        Effect   = "Allow"
-        Action   = ["kms:GenerateDataKey*", "kms:Decrypt"]
-        Resource = var.kms_key_arn
-      } : null
-    ] |> compact()
+      }
+    ]
   })
 }
 
