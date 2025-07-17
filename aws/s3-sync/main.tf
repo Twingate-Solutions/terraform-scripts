@@ -58,7 +58,6 @@ resource "aws_iam_role_policy_attachment" "twingate_attach" {
 # Create or manage the S3 bucket for log storage
 resource "aws_s3_bucket" "logs" {
   bucket = var.bucket_name
-  acl    = "private"
 }
 
 # Bucket policy: grants only the sync role permission to put objects
