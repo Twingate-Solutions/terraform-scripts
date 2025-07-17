@@ -8,7 +8,6 @@ locals {
 resource "aws_iam_openid_connect_provider" "twingate" {
   url            = local.oidc_url
   client_id_list = [var.tenant_slug]
-  # thumbprint_list can be added if using self-signed certs
 }
 
 # IAM policy assigned to the role: grants Twingate permission to upload logs
