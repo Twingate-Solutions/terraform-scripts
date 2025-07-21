@@ -4,8 +4,6 @@
 
 This repository is maintained by the Twingate Solutions Engineering team to help customers deploy, test, and explore Twingate across cloud environments using Terraform.
 
----
-
 ### 🌐 Overview
 
 This repo offers:
@@ -13,8 +11,6 @@ This repo offers:
 - **Reference Terraform** for deploying infrastructure on AWS (Azure & GCP coming soon)
 - **Reusable Terraform modules** to streamline cloud infrastructure provisioning
 - **Sandbox environments** for safe, isolated experimentation and proof-of-concept validation
-
----
 
 ### 📁 Directory Structure
 
@@ -47,8 +43,6 @@ infraops/
 └── docs/             # Diagrams, usage guides, and documentation
 ````
 
----
-
 ### 🚀 Getting Started
 
 1. Clone the repo:
@@ -79,8 +73,6 @@ infraops/
 
 > ⚠️ Sandboxes are isolated and intended for testing and POCs. Avoid using them for persistent infrastructure.
 
----
-
 ### 🔧 Provider Versioning Strategy
 
 To ensure consistency across clouds and environments, provider versions are pinned centrally in `global/`:
@@ -98,8 +90,6 @@ terraform {
 ```
 
 Each sandbox or example can override or extend these defaults.
-
----
 
 ### 🤝 Contributing
 
