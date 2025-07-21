@@ -15,7 +15,7 @@ This repo offers:
 ### 📁 Directory Structure
 
 ```bash
-infraops/
+terraform-scripts/
 ├── modules/          # Reusable Terraform modules
 │   ├── networking/   # Example: VPC, subnets, routing
 │   └── twingate/     # Example: Twingate connector module
@@ -48,8 +48,8 @@ infraops/
 1. Clone the repo:
 
    ```bash
-   git clone https://github.com/your-org/infraops.git
-   cd infraops
+   git clone https://github.com/Twingate-Solutions/terraform-scripts.git
+   cd terraform-scripts
    ```
 
 2. Navigate to a sandbox or example:
