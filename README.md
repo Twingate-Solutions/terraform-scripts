@@ -1,6 +1,6 @@
-# Twingate Solutions InfraOps
+# Terraform Scripts
 
-🙋‍♂️ **Welcome to the Solutions InfraOps Repository!**
+🙋‍♂️ **Welcome to the Twingate Solutions Terraform Scripts Repository!**
 
 This repository is maintained by the Twingate Solutions Engineering team to help customers deploy, test, and explore Twingate across cloud environments using Terraform.
 
