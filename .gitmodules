@@ -1,0 +1,3 @@
+[submodule "modules/terraform-twingate-modules"]
+	path = modules/terraform-twingate-modules
+	url = https://github.com/gbern-tg/terraform-twingate-modules
