@@ -1,28 +1,32 @@
+# Defining reusable values
 locals {
-  oidc_url    = "https://${var.tenant_slug}.twingate.com/oidc"
-  oidc_prefix = "${var.tenant_slug}.twingate.com/oidc"
-  bucket_arn  = "arn:aws:s3:::${var.bucket_name}"
+  oidc_url    = "https://${var.twingate_tenant_slug}.twingate.com/oidc"
+  oidc_prefix = "${var.twingate_tenant_slug}.twingate.com/oidc"
+  bucket_arn  = "arn:aws:s3:::${var.aws_bucket_name}"
 }
 
 # OIDC provider: allows AWS to validate tokens issued by Twingate
 resource "aws_iam_openid_connect_provider" "twingate" {
   url            = local.oidc_url
-  client_id_list = [var.tenant_slug]
+  client_id_list = [var.twingate_tenant_slug]
+  #thumbprint_list = [] # Twingate doesn't support custom thumbprints, but AWS may require at least one for <5.81.0
 }
 
 # IAM policy assigned to the role: grants Twingate permission to upload logs
 resource "aws_iam_policy" "twingate_s3_sync" {
-  name        = "${var.tenant_slug}-twingate-s3-sync"
+  name        = "${var.twingate_tenant_slug}-twingate-s3-sync-2"
   description = "Allows Twingate to upload logs to S3"
 
   policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "TwingateS3Sync"
-        Effect   = "Allow"
-        Action   = ["s3:PutObject"]
-        Resource = ["${local.bucket_arn}/*"]
+        Sid    = "TwingateS3Sync"
+        Effect = "Allow"
+        Action = "s3:PutObject"
+        Resource = [
+          "${local.bucket_arn}/*"
+        ]
       }
     ]
   })
@@ -30,17 +34,17 @@ resource "aws_iam_policy" "twingate_s3_sync" {
 
 # IAM role assumed by Twingate via OIDC for secure log sync
 resource "aws_iam_role" "twingate_s3_sync" {
-  name = "${var.tenant_slug}-twingate-s3-sync-role"
+  name = "${var.twingate_tenant_slug}-twingate-s3-sync-role"
 
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.twingate.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
-          "${local.oidc_prefix}:aud" = var.tenant_slug
+          "${local.oidc_prefix}:aud" = var.twingate_tenant_slug
           "${local.oidc_prefix}:sub" = "events_sync"
         }
       }
@@ -56,7 +60,7 @@ resource "aws_iam_role_policy_attachment" "twingate_attach" {
 
 # Create or manage the S3 bucket for log storage
 resource "aws_s3_bucket" "logs" {
-  bucket = var.bucket_name
+  bucket = var.aws_bucket_name
 }
 
 # Bucket policy: grants only the sync role permission to put objects
@@ -66,13 +70,15 @@ resource "aws_s3_bucket_policy" "logs" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid      = "TwingateS3Sync"
-      Effect   = "Allow"
+      Sid    = "TwingateS3Sync"
+      Effect = "Allow"
       Principal = {
         AWS = aws_iam_role.twingate_s3_sync.arn
       }
-      Action   = ["s3:PutObject"]
-      Resource = ["${aws_s3_bucket.logs.arn}/*"]
+      Action = ["s3:PutObject"]
+      Resource = [
+        "${local.bucket_arn}/*"
+      ]
     }]
   })
 }

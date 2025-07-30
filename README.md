@@ -17,27 +17,26 @@ This repo offers:
 ```bash
 terraform-scripts/
 ├── modules/          # Reusable Terraform modules
-│   ├── networking/   # Example: VPC, subnets, routing
-│   └── twingate/     # Example: Twingate connector module
+│   ├── aws/          # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
+│   ├── gcp/          # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
+│   ├── azure/        # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
+│   ├── digitalocean/ # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
+│   └── twingate/     # └── Modules for common Twingate resources (RemoteNetworks, Connectors, Resources, etc.)
 │
-├── examples/         # Complete examples using modules
-│   └── aws/
-│       └── quickstart/
-│           ├── main.tf
-│           ├── variables.tf
-│           └── README.md
+├── examples/         # Complete examples using modules or direct code
+│   ├── aws/
+│   ├── gcp/
+│   ├── azure/
+│   ├── digitalocean/
+│   └── twingate/
+│       ├── aws-s3-sync-iam-user/
+│       └── aws-s3-sync-oidc-role/
 │
 ├── sandboxes/        # Isolated, self-contained playgrounds for testing
-│   └── aws-sandbox/
-│       ├── main.tf
-│       ├── providers.tf
-│       ├── backend.tf
-│       └── variables.tf
-│
-├── global/           # Shared provider & backend configuration
-│   ├── providers.tf
-│   ├── versions.tf
-│   └── backend.tf
+│   ├── aws/
+│   ├── gcp/
+│   ├── azure/
+│   └── digitalocean/
 │
 ├── scripts/          # Optional automation (bootstrap, cleanup, etc.)
 └── docs/             # Diagrams, usage guides, and documentation
@@ -58,10 +57,33 @@ terraform-scripts/
    cd sandboxes/aws-sandbox
    ```
 
+3. Configure your environment
+
+Copy the example variables file and fill in your values:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars`, example:
+
+* `aws_region` – AWS region to deploy in (e.g. `us-west-2`)
+* `aws_bucket_name` – The S3 bucket name for logs (must be globally unique)
+* `twingate_tenant_slug` – Your Twingate network slug (e.g. `acme` from `https://acme.twingate.com`)
+
+Export any other credentials into the terminal session (skip if already configured):
+
+```bash
+export ABC_ACCESS_KEY_ID="ABCDEFG"
+export ABC_SECRET_ACCESS_KEY="HIJKLMNOP"
+export ABC_SESSION_TOKEN="XYZ123"
+```
+
 3. Run Terraform:
 
    ```bash
    terraform init
+   terraform plan
    terraform apply
    ```
 
@@ -72,24 +94,6 @@ terraform-scripts/
    ```
 
 > ⚠️ Sandboxes are isolated and intended for testing and POCs. Avoid using them for persistent infrastructure.
-
-### 🔧 Provider Versioning Strategy
-
-To ensure consistency across clouds and environments, provider versions are pinned centrally in `global/`:
-
-```hcl
-terraform {
-  required_providers {
-    aws     = { source = "hashicorp/aws", version = "~> 5.0" }
-    azurerm = { source = "hashicorp/azurerm", version = "~> 3.0" }
-    google  = { source = "hashicorp/google", version = "~> 5.0" }
-  }
-
-  required_version = ">= 1.6.0"
-}
-```
-
-Each sandbox or example can override or extend these defaults.
 
 ### 🤝 Contributing
 

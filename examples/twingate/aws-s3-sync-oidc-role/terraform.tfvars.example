@@ -1,0 +1,7 @@
+##############################################################
+# AWS Configuration
+##############################################################
+
+aws_region           = "ca-central-1"
+aws_bucket_name      = "twingate-acme-s3-sync-logs"
+twingate_tenant_slug = "acme"
