@@ -1,0 +1,126 @@
+# examples/ecs/terraform.tfvars.example
+# Copy this file to terraform.tfvars and update with your values
+
+# =============================================================================
+# GENERAL CONFIGURATION
+# =============================================================================
+
+aws_region  = "us-west-2"
+environment = "production"
+vpc_id      = "vpc-12345678"
+
+common_tags = {
+  Project     = "twingate-connector"
+  Environment = "production"
+  Owner       = "platform-team"
+  CostCenter  = "infrastructure"
+}
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+additional_cidr_blocks = [
+  "172.16.0.0/12",    # Additional RFC1918 space
+  "192.168.0.0/16",   # Additional RFC1918 space
+  "10.100.0.0/16"     # On-premises network
+]
+
+assign_public_ip                = false  # Use NAT Gateway instead
+create_load_balancer           = false
+enable_nlb_deletion_protection = true
+
+# =============================================================================
+# ECS CLUSTER CONFIGURATION
+# =============================================================================
+
+create_ecs_cluster         = true
+existing_cluster_name      = ""  # Only needed if create_ecs_cluster = false
+enable_container_insights  = true
+
+# =============================================================================
+# FARGATE CONFIGURATION
+# =============================================================================
+
+twingate_image    = "twingate/connector:latest"
+fargate_cpu       = 512
+fargate_memory    = 1024
+fargate_desired_count = 2
+
+deployment_maximum_percent         = 200
+deployment_minimum_healthy_percent = 50
+
+# =============================================================================
+# FARGATE SPOT CONFIGURATION
+# =============================================================================
+
+create_spot_connector = true
+spot_cpu              = 256
+spot_memory           = 512
+spot_desired_count    = 1
+spot_base_capacity    = 1
+
+# =============================================================================
+# EC2 LAUNCH TYPE CONFIGURATION
+# =============================================================================
+
+create_ec2_connector = false
+ec2_cpu              = 512
+ec2_memory           = 1024
+ec2_desired_count    = 2
+
+ec2_autoscaling_min_capacity = 1
+ec2_autoscaling_max_capacity = 4
+
+# =============================================================================
+# AUTO SCALING CONFIGURATION
+# =============================================================================
+
+enable_autoscaling              = true
+autoscaling_min_capacity        = 1
+autoscaling_max_capacity        = 5
+autoscaling_cpu_target_value    = 70
+autoscaling_memory_target_value = 80
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+log_retention_days = 30
+
+# =============================================================================
+# SECRETS MANAGER CONFIGURATION
+# =============================================================================
+
+secret_recovery_window_in_days = 7
+
+# =============================================================================
+# IAM CONFIGURATION
+# =============================================================================
+
+# Example additional task permissions (uncomment and modify as needed)
+# additional_task_permissions = [
+#   {
+#     Effect = "Allow"
+#     Action = [
+#       "s3:GetObject"
+#     ]
+#     Resource = "arn:aws:s3:::my-config-bucket/*"
+#   }
+# ]
+
+# =============================================================================
+# TWINGATE CONFIGURATION
+# =============================================================================
+
+twingate_url = "https://mycompany.twingate.com"
+
+# Sensitive values - consider using environment variables:
+# export TF_VAR_twingate_access_token="your-access-token"
+# export TF_VAR_twingate_refresh_token="your-refresh-token"
+twingate_access_token  = "your-access-token-here"
+twingate_refresh_token = "your-refresh-token-here"
+
+twingate_log_level        = 4
+twingate_log_analytics    = true
+twingate_status_reports_v1 = true
