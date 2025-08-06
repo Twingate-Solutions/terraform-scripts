@@ -1,0 +1,306 @@
+# examples/eks/terraform.tfvars.example
+# Copy this file to terraform.tfvars and update with your values
+
+# =============================================================================
+# GENERAL CONFIGURATION
+# =============================================================================
+
+aws_region       = "us-west-2"
+environment      = "production"
+vpc_id           = "vpc-12345678"
+eks_cluster_name = "my-eks-cluster"
+
+common_labels = {
+  project     = "twingate-connector"
+  environment = "production"
+  owner       = "platform-team"
+  costCenter  = "infrastructure"
+}
+
+# =============================================================================
+# NAMESPACE CONFIGURATION
+# =============================================================================
+
+create_namespaces    = true
+basic_namespace      = "twingate-basic"
+advanced_namespace   = "twingate-advanced"
+production_namespace = "twingate-production"
+
+# =============================================================================
+# IMAGE CONFIGURATION
+# =============================================================================
+
+twingate_image_repository = "twingate/connector"
+twingate_image_tag       = "latest"
+production_image_tag     = "1.60.0"  # Use specific version for production
+image_pull_policy        = "Always"
+
+# Example for private registry
+# image_pull_secrets = ["regcred"]
+
+# =============================================================================
+# BASIC CONNECTOR CONFIGURATION
+# =============================================================================
+
+basic_replicas       = 2
+basic_cpu_request    = "100m"
+basic_memory_request = "128Mi"
+basic_cpu_limit      = "500m"
+basic_memory_limit   = "256Mi"
+
+# =============================================================================
+# ADVANCED CONNECTOR CONFIGURATION
+# =============================================================================
+
+advanced_replicas       = 3
+advanced_cpu_request    = "200m"
+advanced_memory_request = "256Mi"
+advanced_cpu_limit      = "1000m"
+advanced_memory_limit   = "512Mi"
+
+advanced_twingate_log_level = 5
+advanced_additional_env_vars = {
+  "FEATURE_FLAG_ADVANCED_LOGGING" = "true"
+  "METRICS_ENABLED"               = "true"
+}
+
+# =============================================================================
+# PRODUCTION CONNECTOR CONFIGURATION
+# =============================================================================
+
+create_production_connector = true
+
+production_replicas       = 5
+production_cpu_request    = "500m"
+production_memory_request = "512Mi"
+production_cpu_limit      = "2000m"
+production_memory_limit   = "1Gi"
+
+production_twingate_log_level = 3
+production_additional_env_vars = {
+  "FEATURE_FLAG_METRICS"     = "true"
+  "FEATURE_FLAG_TRACING"     = "true"
+  "PERFORMANCE_TUNING"       = "enabled"
+  "CIRCUIT_BREAKER_ENABLED"  = "true"
+}
+
+# =============================================================================
+# SERVICE ACCOUNT CONFIGURATION (IRSA)
+# =============================================================================
+
+# Example for IAM Roles for Service Accounts (IRSA)
+service_account_annotations = {
+  "eks.amazonaws.com/role-arn" = "arn:aws:iam::123456789012:role/TwingateConnectorRole"
+}
+
+production_service_account_annotations = {
+  "eks.amazonaws.com/role-arn" = "arn:aws:iam::123456789012:role/TwingateConnectorProdRole"
+}
+
+# =============================================================================
+# POD CONFIGURATION
+# =============================================================================
+
+pod_annotations = {
+  "prometheus.io/scrape" = "true"
+  "prometheus.io/port"   = "8080"
+}
+
+read_only_root_filesystem = false  # Set to true for enhanced security
+
+# =============================================================================
+# NODE SELECTION AND SCHEDULING
+# =============================================================================
+
+node_selector = {
+  "kubernetes.io/arch"               = "amd64"
+  "node.kubernetes.io/instance-type" = "t3.medium"
+}
+
+production_node_selector = {
+  "node.kubernetes.io/instance-type" = "m5.large"
+  "dedicated"                        = "twingate-production"
+}
+
+tolerations = [
+  {
+    key      = "spot"
+    operator = "Equal"
+    value    = "true"
+    effect   = "NoSchedule"
+  }
+]
+
+production_tolerations = [
+  {
+    key      = "dedicated"
+    operator = "Equal"
+    value    = "twingate-production"
+    effect   = "NoSchedule"
+  }
+]
+
+# Advanced node affinity for production workloads
+production_node_affinity = {
+  required_during_scheduling_ignored_during_execution = {
+    node_selector_terms = [
+      {
+        match_expressions = [
+          {
+            key      = "node.kubernetes.io/instance-type"
+            operator = "In"
+            values   = ["m5.large", "m5.xlarge", "c5.large", "c5.xlarge"]
+          },
+          {
+            key      = "topology.kubernetes.io/zone"
+            operator = "In"
+            values   = ["us-west-2a", "us-west-2b", "us-west-2c"]
+          }
+        ]
+      }
+    ]
+  }
+}
+
+# =============================================================================
+# AUTO SCALING CONFIGURATION
+# =============================================================================
+
+enable_hpa       = true
+hpa_min_replicas = 2
+hpa_max_replicas = 10
+hpa_cpu_target   = 70
+hpa_memory_target = 80
+
+production_hpa_min_replicas = 3
+production_hpa_max_replicas = 20
+
+# =============================================================================
+# POD DISRUPTION BUDGET CONFIGURATION
+# =============================================================================
+
+enable_pdb         = true
+pdb_max_unavailable = "1"
+
+production_pdb_min_available = "2"
+
+# =============================================================================
+# SERVICE CONFIGURATION
+# =============================================================================
+
+create_service = true
+service_type   = "ClusterIP"
+
+service_annotations = {
+  "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
+}
+
+# =============================================================================
+# HEALTH CHECKS CONFIGURATION
+# =============================================================================
+
+liveness_probe = {
+  path                  = "/health"
+  port                  = 8080
+  initial_delay_seconds = 30
+  period_seconds        = 10
+  timeout_seconds       = 5
+  failure_threshold     = 3
+  success_threshold     = 1
+}
+
+readiness_probe = {
+  path                  = "/ready"
+  port                  = 8080
+  initial_delay_seconds = 5
+  period_seconds        = 10
+  timeout_seconds       = 5
+  failure_threshold     = 3
+  success_threshold     = 1
+}
+
+# =============================================================================
+# NETWORK POLICY CONFIGURATION
+# =============================================================================
+
+enable_network_policy = true
+network_policy_types  = ["Egress"]
+
+# Allow ingress from monitoring namespace
+network_policy_ingress_rules = [
+  {
+    ports = [
+      {
+        port     = 8080
+        protocol = "TCP"
+      },
+      {
+        port     = 9090
+        protocol = "TCP"
+      }
+    ]
+    from = [
+      {
+        namespace_selector = {
+          match_labels = {
+            name = "monitoring"
+          }
+        }
+      }
+    ]
+  }
+]
+
+# =============================================================================
+# VOLUMES CONFIGURATION
+# =============================================================================
+
+# Example additional volumes
+volumes = [
+  {
+    name = "config-volume"
+    config_map = {
+      name = "twingate-config"
+    }
+  }
+]
+
+volume_mounts = [
+  {
+    name       = "config-volume"
+    mount_path = "/etc/twingate/config"
+    read_only  = true
+  }
+]
+
+# =============================================================================
+# FEATURE FLAGS
+# =============================================================================
+
+enable_istio = false
+
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# =============================================================================
+
+additional_env_vars = {
+  "TZ"           = "UTC"
+  "LOG_FORMAT"   = "json"
+  "REGION"       = "us-west-2"
+}
+
+# =============================================================================
+# TWINGATE CONFIGURATION
+# =============================================================================
+
+twingate_url = "https://mycompany.twingate.com"
+
+# Sensitive values - consider using environment variables:
+# export TF_VAR_twingate_access_token="your-access-token"
+# export TF_VAR_twingate_refresh_token="your-refresh-token"
+twingate_access_token  = "your-access-token-here"
+twingate_refresh_token = "your-refresh-token-here"
+
+twingate_log_level        = 4
+twingate_log_analytics    = true
+twingate_status_reports_v1 = true
