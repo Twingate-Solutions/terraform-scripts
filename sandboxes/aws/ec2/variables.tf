@@ -33,11 +33,13 @@ variable "aws_session_token" {
 variable "app_name" {
   type        = string
   description = "Application Name"
+  default     = "twingate-tf-sandbox-demo-aws"
 }
 
 variable "app_environment" {
   type        = string
   description = "Application Environment"
+  default     = "sandbox-demo"
 }
 
 # VPC
@@ -45,16 +47,19 @@ variable "app_environment" {
 variable "aws_region" {
   type        = string
   description = "AWS Region"
+  default     = "us-west-1"
 }
 
 variable "aws_vpc_cidr_block" {
   type        = string
   description = "AWS VPC CIDR Block"
+  default     = "10.37.0.0/16"
 }
 
 variable "aws_ssh_key_pair" {
   type        = string
   description = "SSH key pair for EC2 instance"
+  default     = null
 }
 
 # VPC Peering (Optional)
@@ -73,14 +78,14 @@ variable "enable_vpc_peering" {
 
 variable "peer_region" {
   type        = string
-  default     = null
   description = "Region of the VPC to peer with"
+  default     = null
 }
 
 variable "peer_vpc_cidr_block" {
   type        = string
-  default     = null
   description = "Region of the VPC to peer with"
+  default     = null
 }
 
 ##############################################################
@@ -102,6 +107,7 @@ variable "twingate_api_token" {
 variable "twingate_network_id" {
   type        = string
   description = "Twingate network id. Set via TF_VAR_twingate_network_id (Codespaces/CI secrets) or terraform.tfvars."
+  sensitive   = true
 }
 
 # Users
@@ -109,6 +115,7 @@ variable "twingate_network_id" {
 variable "tg_users" {
   type        = set(string)
   description = "List of users that you want to assign to group for access to connector + private resource"
+  default     = null
 }
 
 # Groups
@@ -116,6 +123,7 @@ variable "tg_users" {
 variable "tg_eng_group" {
   type        = string
   description = "Existing engineering group id"
+  default     = null
 }
 
 # Connector info
@@ -123,9 +131,11 @@ variable "tg_eng_group" {
 variable "tg_log_analytics_version" {
   type        = string
   description = "Twingate connector log analytics version"
+  default     = "v2"
 }
 
 variable "tg_log_level" {
   type        = string
   description = "Twingate connector log level"
+  default     = "7"
 }
