@@ -72,16 +72,10 @@ encrypt_root_volume  = true
 # =============================================================================
 # TWINGATE CONFIGURATION
 # =============================================================================
+twingate_log_level        = "3" # 3 = info, 7 = debug
+twingate_log_analytics    = true # required for enabling log output
 
+# Intentionally NOT real tokens. These are placeholders, use secrets instead.
 twingate_url = "https://mycompany.twingate.com"
-
-# Sensitive values - consider using environment variables:
-# export TF_VAR_twingate_access_token="your-access-token"
-# export TF_VAR_twingate_refresh_token="your-refresh-token"
 twingate_access_token  = "your-access-token-here"
 twingate_refresh_token = "your-refresh-token-here"
-
-twingate_log_level        = "3"
-twingate_log_level_ha     = "4"
-twingate_log_analytics    = true
-twingate_status_reports_v1 = true

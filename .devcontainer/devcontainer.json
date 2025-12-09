@@ -1,0 +1,22 @@
+{
+  "name": "twingate-terraform",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "features": {
+    // Terraform CLI
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "v1.14.1"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}
