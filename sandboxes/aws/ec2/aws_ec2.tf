@@ -32,7 +32,7 @@ resource "aws_instance" "twingate_connector" {
     set -e
     sudo mkdir -p /etc/twingate/
     {
-      echo TWINGATE_NETWORK="${var.tg_network}"
+      echo TWINGATE_NETWORK="${var.twingate_network_id}"
       echo TWINGATE_ACCESS_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.access_token}"
       echo TWINGATE_REFRESH_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.refresh_token}"
       echo TWINGATE_LOG_ANALYTICS="${var.tg_log_analytics_version}"
@@ -63,7 +63,7 @@ resource "aws_instance" "twingate_connector" {
     set -e
     sudo mkdir -p /etc/twingate/
     {
-      echo TWINGATE_NETWORK="${var.tg_network}"
+      echo TWINGATE_NETWORK="${var.twingate_network_id}"
       echo TWINGATE_ACCESS_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.access_token}"
       echo TWINGATE_REFRESH_TOKEN="${twingate_connector_tokens.tf_demo_aws_connector_tokens.refresh_token}"
       echo TWINGATE_LOG_ANALYTICS="${var.tg_log_analytics_version}"

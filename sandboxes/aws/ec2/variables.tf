@@ -91,17 +91,17 @@ variable "peer_vpc_cidr_block" {
 
 # API token
 
-variable "tg_api_token" {
+variable "twingate_api_token" {
   type        = string
-  description = "Twingate api token"
+  description = "Twingate api token. Set via TF_VAR_twingate_api_token (Codespaces/CI secrets) or terraform.tfvars."
   sensitive   = true
 }
 
 # Network info
 
-variable "tg_network" {
+variable "twingate_network_id" {
   type        = string
-  description = "Twingate network id"
+  description = "Twingate network id. Set via TF_VAR_twingate_network_id (Codespaces/CI secrets) or terraform.tfvars."
 }
 
 # Users

@@ -42,6 +42,6 @@ provider "aws" {
 
 # Configure Twingate Provider
 provider "twingate" {
-  api_token   = var.tg_api_token
-  network     = var.tg_network
+  api_token   = var.twingate_api_token
+  network     = var.twingate_network_id
 }
