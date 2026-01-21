@@ -1,22 +1,29 @@
 {
-  "name": "twingate-terraform",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "name": "Terraform Monorepo",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
 
   "features": {
     // Terraform CLI
-    "ghcr.io/devcontainers/features/terraform:1": {
-      "version": "1.14.1"
-    }
+    "ghcr.io/devcontainers/features/terraform:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/gcloud:1": {},
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/devcontainers/features/git:1": {}
   },
 
   "customizations": {
     "vscode": {
       "extensions": [
         "hashicorp.terraform",
-        "ms-azuretools.vscode-docker"
+        "ms-vscode.makefile-tools",
+        "golang.go"
       ]
     }
   },
 
-  "remoteUser": "vscode"
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "remoteEnv": {
+    "AWS_REGION": "${localEnv:AWS_REGION:us-west-1}"
+  }
 }

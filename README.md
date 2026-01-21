@@ -16,28 +16,23 @@ This repo offers:
 
 ```bash
 terraform-scripts/
-├── modules/          # Reusable Terraform modules
-│   ├── aws/          # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
-│   ├── gcp/          # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
-│   ├── azure/        # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
-│   ├── digitalocean/ # ├── Modules for networking (VPC, subnets, routing), and deploying Twingate Connectors
-│   └── twingate/     # └── Modules for common Twingate resources (RemoteNetworks, Connectors, Resources, etc.)
+├── modules/          # Reusable Terraform modules for deploying Twingate in different environments
+│   ├── aws/          # Amazon
+│   │   ├── connectors/
+│   │   │   ├── ec2/
+│   │   │   ├── ecs/
+│   │   │   └── eks/
+│   │   └── s3-sync/
+│   │   │   ├── iam/
+│   │   │   └── oidc/
+│   ├── azure/        # Azure
+│   ├── do/           # DigitalOcean
+│   ├── gcp/          # Google
+│   ├── oci/          # Oracle
+│   └── twingate/     # RemoteNetworks, Connectors, Resources, etc.
 │
 ├── examples/         # Complete examples using modules or direct code
-│   ├── aws/
-│   ├── gcp/
-│   ├── azure/
-│   ├── digitalocean/
-│   └── twingate/
-│       ├── aws-s3-sync-iam-user/
-│       └── aws-s3-sync-oidc-role/
-│
-├── sandboxes/        # Isolated, self-contained playgrounds for testing
-│   ├── aws/
-│   ├── gcp/
-│   ├── azure/
-│   └── digitalocean/
-│
+├── sandboxes/        # Isolated, self-contained playgrounds for testing/POCs
 ├── scripts/          # Optional automation (bootstrap, cleanup, etc.)
 └── docs/             # Diagrams, usage guides, and documentation
 ````

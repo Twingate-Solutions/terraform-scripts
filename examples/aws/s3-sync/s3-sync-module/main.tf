@@ -1,5 +1,5 @@
 module "aws-twingate-s3-sync" {
-  source = "../../../common/terraform/modules/aws/twingate-s3-sync"
+  source = "../../../common/terraform/modules/aws/s3-sync"
 
   tenant_slug   = "twindemogb"
   bucket_name   = "test-twindemogb-logs"

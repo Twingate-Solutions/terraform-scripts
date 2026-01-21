@@ -1,0 +1,172 @@
+version: '3'
+
+vars:
+  # State file location (local, git-ignored)
+  STATE_DIR: ./terraform-state
+  TF_LOG: INFO
+  # Cloud provider credentials from GitHub Secrets
+  AWS_REGION: '{{.AWS_REGION | default "us-west-1"}}'
+  DO_TOKEN: '{{.DIGITALOCEAN_TOKEN}}'
+  GCP_PROJECT: '{{.GCP_PROJECT_ID}}'
+  AZURE_SUBSCRIPTION_ID: '{{.AZURE_SUBSCRIPTION_ID}}'
+  OCI_TENANCY_OCID: '{{.OCI_TENANCY_OCID}}'
+
+tasks:
+  init:
+    desc: "Initialize Terraform for a specific provider/module"
+    cmds:
+      - mkdir -p {{.STATE_DIR}}/{{.PROVIDER}}/{{.MODULE}}
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform init -backend-config="path={{.STATE_DIR | abs}}/{{.PROVIDER}}/{{.MODULE}}/terraform.tfstate"
+    vars:
+      PROVIDER: '{{.PROVIDER}}'
+      MODULE: '{{.MODULE}}'
+    requires:
+      vars: [PROVIDER, MODULE]
+
+  validate:
+    desc: "Validate Terraform configuration"
+    cmds:
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform validate
+    requires:
+      vars: [PROVIDER, MODULE]
+
+  plan:
+    desc: "Plan Terraform deployment"
+    cmds:
+      - task: init
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform plan -out=tfplan
+    requires:
+      vars: [PROVIDER, MODULE]
+
+  apply:
+    desc: "Apply Terraform deployment"
+    cmds:
+      - task: init
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform apply -auto-approve
+    requires:
+      vars: [PROVIDER, MODULE]
+    preconditions:
+      - sh: test -f examples/{{.PROVIDER}}/{{.MODULE}}/terraform.tfvars || test -f examples/{{.PROVIDER}}/{{.MODULE}}/terraform.tfvars.example
+        msg: "terraform.tfvars file not found in examples/{{.PROVIDER}}/{{.MODULE}}"
+
+  destroy:
+    desc: "Destroy Terraform deployment"
+    cmds:
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform destroy -auto-approve
+    requires:
+      vars: [PROVIDER, MODULE]
+    prompt: "Are you sure you want to destroy {{.PROVIDER}}/{{.MODULE}}? (yes/no)"
+
+  output:
+    desc: "Display Terraform outputs"
+    cmds:
+      - cd examples/{{.PROVIDER}}/{{.MODULE}} && terraform output
+    requires:
+      vars: [PROVIDER, MODULE]
+
+  # AWS-specific tasks
+  aws:init:
+    desc: "Initialize AWS module"
+    cmds:
+      - task: init
+        vars:
+          PROVIDER: aws
+          MODULE: '{{.MODULE}}'
+    requires:
+      vars: [MODULE]
+
+  aws:connectors:ec2:plan:
+    desc: "Plan AWS EC2 connector deployment"
+    cmds:
+      - task: plan
+        vars:
+          PROVIDER: aws
+          MODULE: connectors/ec2
+
+  aws:connectors:ec2:apply:
+    desc: "Apply AWS EC2 connector deployment"
+    cmds:
+      - task: apply
+        vars:
+          PROVIDER: aws
+          MODULE: connectors/ec2
+
+  aws:connectors:ecs:plan:
+    desc: "Plan AWS ECS connector deployment"
+    cmds:
+      - task: plan
+        vars:
+          PROVIDER: aws
+          MODULE: connectors/ecs
+
+  aws:connectors:ecs:apply:
+    desc: "Apply AWS ECS connector deployment"
+    cmds:
+      - task: apply
+        vars:
+          PROVIDER: aws
+          MODULE: connectors/ecs
+
+  aws:s3-sync:plan:
+    desc: "Plan AWS S3 Sync deployment"
+    cmds:
+      - task: plan
+        vars:
+          PROVIDER: aws
+          MODULE: s3-sync
+
+  aws:s3-sync:apply:
+    desc: "Apply AWS S3 Sync deployment"
+    cmds:
+      - task: apply
+        vars:
+          PROVIDER: aws
+          MODULE: s3-sync
+
+  # DigitalOcean tasks
+  do:connectors:droplets:plan:
+    desc: "Plan DigitalOcean droplet connector deployment"
+    cmds:
+      - task: plan
+        vars:
+          PROVIDER: digitalocean
+          MODULE: connectors/droplets
+
+  do:connectors:droplets:apply:
+    desc: "Apply DigitalOcean droplet connector deployment"
+    cmds:
+      - task: apply
+        vars:
+          PROVIDER: digitalocean
+          MODULE: connectors/droplets
+
+  # OCI tasks
+  oci:connectors:vm:plan:
+    desc: "Plan OCI VM connector deployment"
+    cmds:
+      - task: plan
+        vars:
+          PROVIDER: oci
+          MODULE: connectors/vm
+
+  oci:connectors:vm:apply:
+    desc: "Apply OCI VM connector deployment"
+    cmds:
+      - task: apply
+        vars:
+          PROVIDER: oci
+          MODULE: connectors/vm
+
+  # Multi-cloud tasks
+  all:validate:
+    desc: "Validate all Terraform configurations"
+    cmds:
+      - for: [aws/connectors/ec2, aws/connectors/ecs, aws/s3-sync, digitalocean/connectors/droplets, oci/connectors/vm]
+        cmd: task validate -- PROVIDER={{.ITEM | split "/" | first}} MODULE={{.ITEM | split "/" | join "/" | replace (split "/" | first) ""}}
+
+  all:clean:
+    desc: "Clean up state files and terraform cache"
+    cmds:
+      - rm -rf {{.STATE_DIR}}
+      - find examples -name ".terraform" -type d -exec rm -rf {} +
+      - find examples -name "terraform.tfstate*" -delete
