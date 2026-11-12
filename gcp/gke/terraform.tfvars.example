@@ -1,0 +1,33 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only gcp_project_id and tg_network are required.
+# Prefer `export TWINGATE_API_TOKEN=...` over setting tg_api_token here.
+
+# General
+app_name        = "tg-tf-demo" # lowercase, max 16 chars
+app_environment = "demo"
+
+# GCP
+gcp_project_id              = "<project-id>"
+gcp_region                  = "us-central1"
+gcp_zone_count              = 2 # node zones; nodes = gcp_gke_nodes_per_zone x gcp_zone_count
+gcp_vpc_cidr_block          = "10.42.0.0/16"
+gcp_nat_min_ports_per_vm    = 256
+gcp_gke_release_channel     = "REGULAR"
+gcp_gke_machine_type        = "e2-medium"
+gcp_gke_nodes_per_zone      = 1
+gcp_gke_authorized_networks = [] # set to your egress CIDR, e.g. ["203.0.113.10/32"]; [] = control plane open to the internet
+gcp_gke_namespace           = "twingate-demo"
+
+# Twingate
+tg_network            = "<tenant>" # <tenant>.twingate.com
+tg_connector_count    = 2
+tg_connector_image    = "twingate/connector:1"
+tg_helm_chart_version = "0.1.35"
+tg_users              = [] # ["VXNlcjoxMjM0NQ=="] from <tenant>.twingate.com/users/<id>
+tg_existing_group_ids = [] # ["R3JvdXA6MTIzNDU="]
+
+tg_security_policy_name   = null  # existing policy name, or null for the Default Policy
+tg_autolock_duration      = "30d" # null disables the auto-lock access policy
+tg_create_service_account = false
+
+tg_log_analytics_version = "v2" # v1 or v2 (chart schema)
+tg_log_level             = "3"  # 3 error, 4 warning, 6 info, 7 debug

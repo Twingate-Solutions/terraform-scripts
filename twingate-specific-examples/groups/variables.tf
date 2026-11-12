@@ -1,55 +1,29 @@
-##############################################################
-#
-# Twingate
-#
-##############################################################
-
-### API token
-
 variable "tg_api_token" {
   type        = string
-  description = "Twingate api token"
+  description = "Twingate API token (Read, Write & Provision). Null = read from TWINGATE_API_TOKEN"
+  default     = null
   sensitive   = true
 }
-
-### Network info
 
 variable "tg_network" {
   type        = string
-  description = "Twingate network id"
+  description = "Twingate network slug, e.g. \"autoco\" for autoco.twingate.com"
 }
 
-### Users
-
-# pull in a list of users by id (tg_users are in terraform.tfvars)
-variable "tg_users" {
-  type        = set(string)
-  description = "List of users that you want to assign to group for access to connector + private resource"
-}
-
-# alternative way to pull in a list of users, this time by email 
-variable "tg_users_email" {
-  description = "Variable to pull in a list(string) users by email"
-  type = list(string)
-  default = ["user1@here.local", "user2@here.local", "user3@here.local"]
-}
-
-### Connector info
-
-variable "tg_log_analytics_version" {
+variable "name_prefix" {
   type        = string
-  description = "Twingate connector log analytics version"
+  description = "Prefix for the Twingate objects this example creates"
+  default     = "TF Groups Example"
 }
-
-variable "tg_log_level" {
-  type        = string
-  description = "Twingate connector log level"
-}
-
-### Group Ids
 
 variable "tg_group_ids" {
   type        = set(string)
-  description = "Example usage of group ids through a variable"
-  sensitive   = true
+  description = "Example 2: existing group IDs to grant access, e.g. [\"R3JvdXA6MTIzNDU=\"]"
+  default     = []
+}
+
+variable "tg_users_email" {
+  type        = set(string)
+  description = "Example 3: emails of users to create (invites are sent) and add to a new group"
+  default     = []
 }

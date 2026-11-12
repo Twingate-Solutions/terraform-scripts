@@ -1,0 +1,28 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only gcp_project_id and tg_network are required.
+# Prefer `export TWINGATE_API_TOKEN=...` over setting tg_api_token here.
+
+# General
+app_name        = "tg-tf-demo" # lowercase, max 16 chars
+app_environment = "demo"
+
+# GCP
+gcp_project_id             = "<project-id>"
+gcp_region                 = "us-central1"
+gcp_zone_count             = 2
+gcp_vpc_cidr_block         = "10.40.0.0/16"
+gcp_nat_min_ports_per_vm   = 128
+gcp_connector_machine_type = "e2-small"
+gcp_dns_zone_name          = "tg-tf-demo.int" # resource FQDN: web-gce.<zone>
+
+# Twingate
+tg_network            = "<tenant>" # <tenant>.twingate.com
+tg_connector_count    = 2
+tg_users              = [] # ["VXNlcjoxMjM0NQ=="] from <tenant>.twingate.com/users/<id>
+tg_existing_group_ids = [] # ["R3JvdXA6MTIzNDU="]
+
+tg_security_policy_name   = null  # existing policy name, or null for the Default Policy
+tg_autolock_duration      = "30d" # null disables the auto-lock access policy
+tg_create_service_account = false
+
+tg_log_analytics_version = "v2"
+tg_log_level             = "3" # 7 = debug

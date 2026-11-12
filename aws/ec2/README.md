@@ -1,70 +1,107 @@
-# Twingate TF Quickstart for AWS (EC2 Deployment)
+# Twingate on AWS EC2
 
-The Twingate SE team built this quickstart to serve as a guide in deploying Twingate using Terraform to AWS. This script is apply-ready OOTB and will stand up a sandbox demo environment for testing purposes. The sandbox demo environment consists of:
+Deploys Twingate Connectors on EC2 and a private web server reachable only through Twingate.
 
-- AWS VPC, Public & Private Subnets, Route Tables, NAT & Internet Gateways, EIPs, Security Groups, VPC Peering (Optional), & a Private Hosted Zone (Optional)
-- Twingate Remote Network, Connector, Private Resource
+## Deploys
 
-There are two approaches to deploying Connectors for this quickstart.
+- VPC with public and private subnets across `aws_az_count` AZs, internet gateway, route tables
+- [fck-nat](https://fck-nat.dev/) instance as the private-subnet NAT (P2P friendly)
+- `tg_connector_count` EC2 Connector instances (Twingate AMI), private subnets by default, spread across AZs
+- Ubuntu 26.04 LTS instance running Apache in a private subnet
+- Route 53 private hosted zone with an A record for the private instance (`web-ec2.<zone>`)
+- Twingate Remote Network, Connectors + tokens, group, Resource (TCP 22/80, ICMP)
+- Optional: VPC peering to an existing VPC, Twingate service account + key, security policy assignment
 
-#### Private Subnet Deployment:
+## Diagram
 
-![Private Subnet Deployment](./aws-ec2-cd-private.png)
+Diagrams show a single Connector; the module deploys `tg_connector_count` (default 2).
 
--or-
+| Private subnet (default) | Public subnet |
+| --- | --- |
+| ![Private](./aws-ec2-cd-private.png) | ![Public](./aws-ec2-cd-public.png) |
 
-#### Public Subnet Deployment:
+## Prerequisites
 
-![Public Subnet Deployment](./aws-ec2-cd-public.png)
+- Terraform >= 1.9
+- AWS credentials in the standard chain (env vars, `~/.aws` profile, or SSO)
+- Twingate API token with Read, Write & Provision
+- Optional: existing EC2 key pair (for SSH to the instances)
 
-## Important (Optional) Callouts
+## Usage
 
-### Peer-to-peer connectivity
+```sh
+cp terraform.tfvars.example terraform.tfvars   # set tg_network, adjust the rest
+export TWINGATE_API_TOKEN="<token>"
+terraform init
+terraform apply
+```
 
-This script uses [fck-nat](https://fck-nat.dev/) as the NAT gateway for the Connector, since it is a cost-effective alternative to AWS's managed NAT gateway and is considered NAT traversal-friendly that supports peer-to-peer connectivity OOTB (another great alternative is [Cohesive's VNS3 NATe](https://www.cohesive.net/vns3/cloud-nat/)). If you choose to use AWS's managed NAT gateway and require peer-to-peer connectivity, refer to Twingate's section on [What to do if your Connector is behind an incompatible NAT](https://www.twingate.com/docs/troubleshooting-p2p#what-to-do-if-your-connector-is-behind-an-incompatible-nat).
+Access (Twingate Client signed in, user in `tg_users`):
 
-### Private Hosted Zone
+```sh
+curl http://web-ec2.tg-tf-demo.int
+ssh -i <key.pem> ubuntu@web-ec2.tg-tf-demo.int   # requires aws_ssh_key_pair
+```
 
-This quickstart includes standing up a private hosted zone to resolve a FQDN within the AWS VPC by default. The address on the Twingate resource has lines commented out if an IP-based address is desired instead.
+Teardown:
 
-### VPC Peering
+```sh
+terraform destroy
+```
 
-This quickstart also includes a VPC peering connection by default. This is useful if there is a need to connect the sandbox VPC to existing infrastructure.
+## Inputs
 
-## How to Setup & Use
+| Name | Default | Description |
+| --- | --- | --- |
+| `tg_network` | — (required) | Twingate network slug (`<slug>.twingate.com`) |
+| `tg_api_token` | `null` | API token; null reads `TWINGATE_API_TOKEN` |
+| `tg_connector_count` | `2` | Connectors to deploy |
+| `tg_users` | `[]` | User IDs added to the demo group |
+| `tg_existing_group_ids` | `[]` | Existing group IDs also granted access |
+| `tg_security_policy_name` | `null` | Existing policy name; null = Default Policy |
+| `tg_autolock_duration` | `"30d"` | Auto-lock access policy duration; null disables |
+| `tg_create_service_account` | `false` | Create a service account + key with access |
+| `aws_region` | `us-east-1` | Region |
+| `aws_vpc_cidr_block` | `10.37.0.0/16` | VPC CIDR |
+| `aws_az_count` | `2` | AZs for subnets |
+| `aws_connector_subnet_type` | `private` | `private` or `public` |
+| `aws_connector_instance_type` | `t3a.micro` | Connector instance type |
+| `aws_ssh_key_pair` | `null` | Existing key pair name |
+| `aws_dns_zone_name` | `tg-tf-demo.int` | Private hosted zone; resource FQDN is `web-ec2.<zone>` |
+| `enable_vpc_peering` | `false` | Peer with an existing same-account VPC |
+| `peer_vpc_id`, `peer_vpc_cidr_block` | `null` | Required when peering is enabled |
+| `peer_region` | `null` | Peer region; null = `aws_region` |
+| `peer_route_table_id` | `null` | Peer route table for the return route; null = add it manually |
 
-1. AWS Credentials (choose either):
+Full list: [variables.tf](./variables.tf).
 
-   - **Export to terminal/shell:** copy and paste to terminal/shell from AWS console (command line or programmatic access)
-   - **Add to terraform.tfvars:** uncomment lines 10:30 in variables.tf and lines 18:22 in providers.tf and fill out (command line or programmatic access)
+## Outputs
 
-2. Fill out terraform.tfvars
+| Name | Description |
+| --- | --- |
+| `twingate_resource_address` | Address to use through the Twingate Client |
+| `connector_names` | Twingate Connector names |
+| `connector_instance_ids` | Connector EC2 instance IDs |
+| `private_resource_ip` | Private IP of the Apache instance |
+| `nat_public_ip` | fck-nat egress IP |
+| `vpc_id` | VPC ID |
+| `vpc_peering_connection_id` | Peering connection ID (null when disabled) |
+| `service_account_key` | Service account key token (sensitive) |
 
-   - Specify AWS settings
-     - Application name
-     - AWS Region
-     - VPC CIDR Block
-     - SSH key to use
-     - VPC peering
-   - Specify Twingate settings
-     - Pull an api key from the admin console (read, write, & provision)
-     - Grab network slug (`<slug>.twingate.com`)
-     - Grab user ids that you want to use to access the connector + private resource (Admin Console -> Team -> Users -> `<USER>` -> Grab ID from URL `<slug>.twingate.com/users/<userID>`)
-     - Specify analytics version and log level
+## Notes
 
-3. Decide whether you want to deploy connector in a private or public subnet (lines 19:79 in aws_ec2.tf). Diagrams provided for both [private](./aws-ec2-cd-private.png) and [public](./aws-ec2-cd-public.png) subnet deployments.
+- **NAT / P2P:** the AWS managed NAT gateway does not support Twingate peer-to-peer. fck-nat does. See [Connector behind an incompatible NAT](https://www.twingate.com/docs/troubleshooting-p2p#what-to-do-if-your-connector-is-behind-an-incompatible-nat) if swapping in a managed NAT gateway.
+- **Tokens:** Connector tokens are written to instance user data and Terraform state. Restrict access to both.
+- **IMDSv2** is required on all instances; root volumes are encrypted.
+- **AMIs:** looked up with `most_recent` but `ami` changes are ignored, so a new AMI release does not replace running instances. Pick one up explicitly: `terraform apply -replace='aws_instance.twingate_connector[0]'` (one Connector at a time), `-replace=aws_instance.private_resource`, `-replace=aws_instance.fck_nat`.
+- **First boot:** the private resource retries the Apache install (up to 10 × 30 s) while fck-nat comes up or unattended-upgrades holds the dpkg lock.
+- **VPC peering:** same account only. The peer route is added to both the public and private route tables, so Connectors reach the peer VPC in either subnet type. Without `peer_route_table_id`, add the return route (`aws_vpc_cidr_block` → peering connection) in the peer VPC manually. Add Twingate Resources for peer-VPC hosts separately.
+- **Cost:** 2× t3a.micro, 1× t3.micro, 1× t4g.nano, public IPv4 for fck-nat, Route 53 hosted zone.
 
-4. Create a Policy in the Twingate admin console named `Trusted-30Day-noMFA` to work with the existing data source in the script (otherwise change it to one that exists in your tenant)
+## Validate without credentials
 
-5. Run the script
-   - `Terraform init` (pull the required dependencies)
-   - `Terraform plan` (plan out what will be implemented and check for errors)
-   - `Terraform apply` (apply the plan)
-6. Remove the instructure when finished
-   - `Terraform destroy` (tear down the infrastructure when finished)
+From the repo root:
 
-## Accessing the Resource
-
-- Ensure you are logged into the client with access to the Twingate network specified
-- SSH = `ssh -i ~/.ssh/<your_key_here> ubuntu@tg-tf-demo.int` (swap for your SSH key)
-- Web = Navigate to `tg-tf-demo.int` in your browser
+```sh
+docker compose -f ci/compose.yaml run --rm validate aws/ec2
+```

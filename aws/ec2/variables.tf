@@ -1,86 +1,113 @@
 ##############################################################
 #
-# AWS
+# General
 #
 ##############################################################
 
-# Credentials
-
-/*
-# Uncomment if you prefer to NOT copy/paste in the form of (export AWS_ACCESS_KEY_ID="<SOMEVALUE>") to the terminal
-
-variable "aws_access_key_id" {
-  type        = string
-  description = "Command line or programmatic access - access key id"
-  sensitive   = true
-}
-
-variable "aws_secret_access_key" {
-  type        = string
-  description = "Command line or programmatic access - secret access key"
-  sensitive   = true
-}
-
-variable "aws_session_token" {
-  type        = string
-  description = "Command line or programmatic access - session token"
-  sensitive   = true
-}
-*/
-
-# Tags
-
 variable "app_name" {
   type        = string
-  description = "Application Name"
+  description = "Prefix for cloud resource names and the Application tag"
+  default     = "tg-tf-demo"
 }
 
 variable "app_environment" {
   type        = string
-  description = "Application Environment"
+  description = "Environment tag value"
+  default     = "demo"
 }
 
-# VPC
+##############################################################
+#
+# AWS
+#
+##############################################################
 
 variable "aws_region" {
   type        = string
-  description = "AWS Region"
+  description = "AWS region to deploy into"
+  default     = "us-east-1"
 }
 
 variable "aws_vpc_cidr_block" {
   type        = string
-  description = "AWS VPC CIDR Block"
+  description = "CIDR block for the demo VPC (a /16 is expected; subnets are carved as /24s)"
+  default     = "10.37.0.0/16"
+}
+
+variable "aws_az_count" {
+  type        = number
+  description = "Number of availability zones to spread public/private subnets across"
+  default     = 2
+
+  validation {
+    condition     = var.aws_az_count >= 1 && var.aws_az_count <= 4
+    error_message = "aws_az_count must be between 1 and 4."
+  }
 }
 
 variable "aws_ssh_key_pair" {
   type        = string
-  description = "SSH key pair for EC2 instance"
-}
-
-# VPC Peering (Optional)
-
-variable "peer_vpc_id" {
-  description = "The ID of the VPC to peer with"
-  type        = string
+  description = "Existing EC2 key pair name for the Connector and private resource instances (null = no key)"
   default     = null
 }
 
+variable "aws_connector_subnet_type" {
+  type        = string
+  description = "Subnet type the Connector instances are placed in: private (behind fck-nat) or public"
+  default     = "private"
+
+  validation {
+    condition     = contains(["private", "public"], var.aws_connector_subnet_type)
+    error_message = "aws_connector_subnet_type must be \"private\" or \"public\"."
+  }
+}
+
+variable "aws_connector_instance_type" {
+  type        = string
+  description = "Instance type for the Connector instances"
+  default     = "t3a.micro"
+}
+
+variable "aws_dns_zone_name" {
+  type        = string
+  description = "Route 53 private hosted zone name; the private resource is web-ec2.<zone>"
+  default     = "tg-tf-demo.int"
+}
+
+##############################################################
+#
+# AWS - VPC Peering (Optional)
+#
+##############################################################
+
 variable "enable_vpc_peering" {
-  description = "Enable VPC Peering Connection"
   type        = bool
+  description = "Peer the demo VPC with an existing VPC in the same account"
   default     = false
+}
+
+variable "peer_vpc_id" {
+  type        = string
+  description = "ID of the existing VPC to peer with (required when enable_vpc_peering = true)"
+  default     = null
 }
 
 variable "peer_region" {
   type        = string
+  description = "Region of the peer VPC (null = same region as aws_region)"
   default     = null
-  description = "Region of the VPC to peer with"
 }
 
 variable "peer_vpc_cidr_block" {
   type        = string
+  description = "CIDR block of the peer VPC (required when enable_vpc_peering = true)"
   default     = null
-  description = "Region of the VPC to peer with"
+}
+
+variable "peer_route_table_id" {
+  type        = string
+  description = "Peer VPC route table to add the return route to (null = add the return route manually)"
+  default     = null
 }
 
 ##############################################################
@@ -89,43 +116,67 @@ variable "peer_vpc_cidr_block" {
 #
 ##############################################################
 
-# API token
-
 variable "tg_api_token" {
   type        = string
-  description = "Twingate api token"
+  description = "Twingate API token (Read, Write & Provision). Null = read from TWINGATE_API_TOKEN"
+  default     = null
   sensitive   = true
 }
 
-# Network info
-
 variable "tg_network" {
   type        = string
-  description = "Twingate network id"
+  description = "Twingate network slug, e.g. \"autoco\" for autoco.twingate.com"
 }
 
-# Users
+variable "tg_connector_count" {
+  type        = number
+  description = "Number of Connectors to deploy (2+ recommended for redundancy)"
+  default     = 2
+
+  validation {
+    condition     = var.tg_connector_count >= 1
+    error_message = "tg_connector_count must be at least 1."
+  }
+}
 
 variable "tg_users" {
   type        = set(string)
-  description = "List of users that you want to assign to group for access to connector + private resource"
+  description = "Twingate user IDs added to the demo group (from <slug>.twingate.com/users/<id>)"
+  default     = []
 }
 
-# Groups
+variable "tg_existing_group_ids" {
+  type        = set(string)
+  description = "Existing Twingate group IDs to also grant access to the demo resource"
+  default     = []
+}
 
-variable "tg_eng_group" {
+variable "tg_security_policy_name" {
   type        = string
-  description = "Existing engineering group id"
+  description = "Existing Twingate security policy name to apply to the resource (null = Default Policy)"
+  default     = null
 }
 
-# Connector info
+variable "tg_autolock_duration" {
+  type        = string
+  description = "Usage-based auto-lock duration for group access, e.g. \"30d\" (null = no access policy)"
+  default     = "30d"
+}
+
+variable "tg_create_service_account" {
+  type        = bool
+  description = "Create a Twingate service account + key with access to the demo resource"
+  default     = false
+}
 
 variable "tg_log_analytics_version" {
   type        = string
-  description = "Twingate connector log analytics version"
+  description = "Connector TWINGATE_LOG_ANALYTICS value"
+  default     = "v2"
 }
 
 variable "tg_log_level" {
   type        = string
-  description = "Twingate connector log level"
+  description = "Connector TWINGATE_LOG_LEVEL value (3 = default, 7 = debug)"
+  default     = "3"
 }

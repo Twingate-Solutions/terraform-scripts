@@ -1,223 +1,125 @@
 ##############################################################
 #
-# Availability Zones
+# Shared AWS networking (kept in sync across aws/* modules)
+#
+# VPC, public/private subnets per AZ, internet gateway, and a
+# fck-nat instance as the NAT for private subnets. fck-nat is
+# used instead of the AWS managed NAT gateway because it is
+# NAT-traversal friendly, which Twingate peer-to-peer needs.
 #
 ##############################################################
 
-# Get a list of available zones for the region
-data "aws_availability_zones" "available_zones" {
-  state                   = "available"
-}
+# Default-enabled AZs only: Local/Wavelength Zones need an opt-in and lack most instance types
+data "aws_availability_zones" "available" {
+  state = "available"
 
-# Output a list of available zones for the region
-output "available_zones" {
-  value                   = data.aws_availability_zones.available_zones.names
-}
-
-# Output the first available zone (to be used as our AZ later)
-output "picked_available_zone" {
-  value                   = data.aws_availability_zones.available_zones.names[0]
-}
-
-##############################################################
-#
-# VPCs
-#
-##############################################################
-
-# Create a VPC
-resource "aws_vpc" "default" {
-  cidr_block              = var.aws_vpc_cidr_block
-  enable_dns_support      = true
-  enable_dns_hostnames    = true
-
-  tags = {
-    Name                  = "${var.app_name}-vpc"
-    Environment           = var.app_environment
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
   }
 }
 
-##############################################################
-#
-# (Optional) VPC Peering - Connect Demo VPC to Existing VPC
-#
-##############################################################
+locals {
+  az_names = data.aws_availability_zones.available.names
 
-# Create a VPC peering connection (optional)
-#resource "aws_vpc_peering_connection" "peer" {
-#  count            = var.enable_vpc_peering ? 1 : 0
-#  vpc_id           = aws_vpc.default.id
-#  peer_vpc_id      = var.peer_vpc_id
-#  peer_region      = var.peer_region
-#  auto_accept      = false
-
-#  tags = {
-#    Name        = "${var.app_name}-vpc-peering"
-#    Environment = var.app_environment
-#  }
-#}
-
-# 
-resource "aws_vpc_peering_connection" "peer" {
-  vpc_id                    = aws_vpc.default.id
-  peer_vpc_id               = var.peer_vpc_id
-  peer_region               = "us-west-1"           # Adjust if peer is in a different region
-  auto_accept               = false
+  # min() keeps this evaluable when the region is short of AZs, so the VPC
+  # precondition below reports the problem instead of a slice() error
+  azs = slice(local.az_names, 0, min(var.aws_az_count, length(local.az_names)))
 }
-
-# 
-resource "aws_vpc_peering_connection_accepter" "peer_accepter" {
-  provider                  = aws.us-west-1
-  vpc_peering_connection_id = aws_vpc_peering_connection.peer.id
-  auto_accept               = true
-}
-
-# 
-resource "aws_route" "peer_route_local_to_peer" {
-  route_table_id            = aws_route_table.private.id
-  destination_cidr_block    = "10.50.0.0/16"
-  vpc_peering_connection_id = aws_vpc_peering_connection.peer.id
-}
-
-# 
-resource "aws_route" "peer_route_peer_to_local" {
-  provider                 = aws.us-west-1
-  route_table_id            = "rtb-04476705007f03223"
-  destination_cidr_block    = "10.41.0.0/16"
-  vpc_peering_connection_id = aws_vpc_peering_connection.peer.id
-}
-
-# Update the route table of the local VPC to route traffic to the peer VPC
-#resource "aws_route" "peer_route" {
-#  count          = var.enable_vpc_peering ? 1 : 0
-#  #route_table_id = aws_default_route_table.public.id
-#  route_table_id = aws_vpc.default.default_route_table_id
-#  destination_cidr_block = "10.50.0.0/16" #var.peer_vpc_cidr_block
-#  vpc_peering_connection_id = aws_vpc_peering_connection.peer[0].id
-#}
-
-# Update the route table of the peer VPC to route traffic back to the local VPC
-#resource "aws_route" "peer_return_route" {
-#  count          = var.enable_vpc_peering ? 1 : 0
-#  #route_table_id = aws_route_table.private.id # Assuming the peer VPC has a private route table; adjust if needed
-#  route_table_id = "rtb-066bd104b34f45954" #aws_vpc.default.default_route_table_id
-#  destination_cidr_block = "10.41.0.0/16" #var.aws_vpc_cidr_block
-#  vpc_peering_connection_id = aws_vpc_peering_connection.peer[0].id
-#}
 
 ##############################################################
 #
-# Subnets
+# VPC & Subnets
 #
 ##############################################################
 
-# Create a public subnet
+resource "aws_vpc" "this" {
+  cidr_block           = var.aws_vpc_cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = "${var.app_name}-vpc"
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(local.az_names) >= var.aws_az_count
+      error_message = "Region ${var.aws_region} has ${length(local.az_names)} available AZ(s) (opt-in zones excluded), fewer than aws_az_count = ${var.aws_az_count}. Lower aws_az_count or choose another region."
+    }
+  }
+}
+
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.default.id
-  cidr_block              = cidrsubnet(aws_vpc.default.cidr_block, 8, 0)
-  availability_zone       = data.aws_availability_zones.available_zones.names[0]
+  count = var.aws_az_count
+
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = cidrsubnet(aws_vpc.this.cidr_block, 8, count.index)
+  availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
 
   tags = {
-    Name                  = "${var.app_name}-public-subnet"
-    Environment           = var.app_environment
+    Name = "${var.app_name}-public-${local.azs[count.index]}"
   }
 }
 
-# Create a private subnet
 resource "aws_subnet" "private" {
-  vpc_id                  = aws_vpc.default.id
-  cidr_block              = cidrsubnet(aws_vpc.default.cidr_block, 8, 1)
-  availability_zone       = data.aws_availability_zones.available_zones.names[0]
+  count = var.aws_az_count
+
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = cidrsubnet(aws_vpc.this.cidr_block, 8, count.index + 10)
+  availability_zone = local.azs[count.index]
 
   tags = {
-    Name                  = "${var.app_name}-private-subnet"
-    Environment           = var.app_environment
+    Name = "${var.app_name}-private-${local.azs[count.index]}"
   }
 }
 
 ##############################################################
 #
-# Route Tables
+# Internet Gateway & Public Routing
 #
 ##############################################################
 
-# PUBLIC
-
-# Use the default route table created with the VPC as the route table for the public subnet (one is created automatically by default)
-resource "aws_default_route_table" "public" {
-  default_route_table_id  = aws_vpc.default.default_route_table_id                  
+resource "aws_internet_gateway" "this" {
+  vpc_id = aws_vpc.this.id
 
   tags = {
-    Name                  = "${var.app_name}-public-route-table"
-    Environment           = var.app_environment
+    Name = "${var.app_name}-igw"
   }
 }
 
-# Add a route in the "public" route table
-resource "aws_route" "public" {
-  route_table_id          = aws_default_route_table.public.id
-  destination_cidr_block  = "0.0.0.0/0"
-  gateway_id              = aws_internet_gateway.aws-igw.id
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.this.id
+
+  tags = {
+    Name = "${var.app_name}-public-rt"
+  }
 }
 
-# Associate the "public" route table to the public subnet
+resource "aws_route" "public_default" {
+  route_table_id         = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.this.id
+}
+
 resource "aws_route_table_association" "public" {
-  subnet_id               = aws_subnet.public.id
-  route_table_id          = aws_default_route_table.public.id
-}
+  count = var.aws_az_count
 
-
-# PRIVATE
-
-# Create a new route table for the private subnet
-resource "aws_route_table" "private" {
-  vpc_id                  = aws_vpc.default.id
-
-  tags = {
-    Name                  = "${var.app_name}-private-route-table"
-    Environment           = var.app_environment
-  }
-}
-
-# Add a route in the "private" route table
-resource "aws_route" "private" {
-  route_table_id          = aws_route_table.private.id
-  destination_cidr_block  = "0.0.0.0/0"
-  #gateway_id              = aws_nat_gateway.aws-ngw.id           # Enable if using AWS default NGW
-  network_interface_id    = aws_network_interface.fck-nat-if.id   # Enable if using fck-nat gateway
-}
-
-# Associate the "private" route table to the private subnet
-resource "aws_route_table_association" "private" {
-  subnet_id               = aws_subnet.private.id
-  route_table_id          = aws_route_table.private.id
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
 }
 
 ##############################################################
 #
-# Internet Gateways
+# fck-nat (NAT instance) & Private Routing
 #
 ##############################################################
 
-# Create an internet gateway for the public subnet to use
-resource "aws_internet_gateway" "aws-igw" {
-  vpc_id                  = aws_vpc.default.id
-
-  tags = {
-    Name                  = "${var.app_name}-igw"
-    Environment           = var.app_environment
-  }
-}
-
-##############################################################
-#
-# NAT Gateways
-#
-##############################################################
-
-# Peer-to-Peer Friendly NAT Gateway
 data "aws_ami" "fck_nat" {
+  most_recent = true
+  owners      = ["568608671756"] # fck-nat
+
   filter {
     name   = "name"
     values = ["fck-nat-al2023-*"]
@@ -227,210 +129,77 @@ data "aws_ami" "fck_nat" {
     name   = "architecture"
     values = ["arm64"]
   }
-
-  owners      = ["568608671756"]
-  most_recent = true
 }
 
-resource "aws_network_interface" "fck-nat-if" {
-  subnet_id       = aws_subnet.public.id
-  security_groups = [aws_security_group.fck-nat-sg.id]
+resource "aws_security_group" "fck_nat" {
+  name        = "${var.app_name}-fck-nat-sg"
+  description = "fck-nat: accept traffic from private subnets, egress anywhere"
+  vpc_id      = aws_vpc.this.id
 
-  source_dest_check = false
+  ingress {
+    description = "All traffic from private subnets"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = aws_subnet.private[*].cidr_block
+  }
+
+  egress {
+    description = "All egress"
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-resource "aws_instance" "fck-nat" {                                                   
-  ami           = data.aws_ami.fck_nat.id
-  key_name        = var.aws_ssh_key_pair
-  instance_type = "t4g.nano"
+resource "aws_instance" "fck_nat" {
+  ami                         = data.aws_ami.fck_nat.id
+  instance_type               = "t4g.nano"
+  subnet_id                   = aws_subnet.public[0].id
+  associate_public_ip_address = true
+  source_dest_check           = false
+  vpc_security_group_ids      = [aws_security_group.fck_nat.id]
 
-  network_interface {
-    network_interface_id = aws_network_interface.fck-nat-if.id
-    device_index         = 0
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+
+  root_block_device {
+    encrypted = true
   }
 
   tags = {
-    Name        = "${var.app_name}-fck-nat"
-    Environment = var.app_environment
-  }                                                                              
+    Name = "${var.app_name}-fck-nat"
+  }
+
+  # most_recent AMI would otherwise replace the NAT on every new fck-nat release.
+  # Pick up a newer AMI with: terraform apply -replace=aws_instance.fck_nat
+  lifecycle {
+    ignore_changes = [ami]
+  }
+
+  depends_on = [aws_route.public_default]
 }
 
-# (Optional) AWS Default NAT Gateway - does not support Peer-to-Peer
-#resource "aws_nat_gateway" "aws-ngw" {
-#  subnet_id               = aws_subnet.public.id
-#  allocation_id           = aws_eip.nat_eip.id
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.this.id
 
-#  tags = {
-#    Name                  = "${var.app_name}-ngw"
-#    Environment           = var.app_environment
-#  }
-#}
-
-##############################################################
-#
-# Elastic IPs
-#
-##############################################################
-
-# Create an EIP for the NAT gateway to use
-resource "aws_eip" "nat_eip" {
-    domain                = "vpc"
-    depends_on            = [aws_internet_gateway.aws-igw]
-
-    tags = {
-        Name              = "${var.app_name}-eip"
-        Environment       = var.app_environment
+  tags = {
+    Name = "${var.app_name}-private-rt"
   }
 }
 
-# Associate EIP to instance
-resource "aws_eip_association" "nat_eip_assoc" {
-  instance_id             = aws_instance.fck-nat.id
-  allocation_id           = aws_eip.nat_eip.id
-
-  depends_on              = [aws_instance.fck-nat]
+resource "aws_route" "private_default" {
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  network_interface_id   = aws_instance.fck_nat.primary_network_interface_id
 }
 
-##############################################################
-#
-# Security Groups
-#
-##############################################################
+resource "aws_route_table_association" "private" {
+  count = var.aws_az_count
 
-# Create security group for fck-nat instance
-resource "aws_security_group" "fck-nat-sg" {                                 
-  name                    = "${var.app_name}-fck-nat-sg"
-  vpc_id                  = aws_vpc.default.id
-
-  ingress {
-    protocol              = "-1"
-    from_port             = 0
-    to_port               = 0
-    cidr_blocks           = [aws_subnet.private.cidr_block]
-  }
-
-  egress {
-    protocol              = "-1"
-    from_port             = 0
-    to_port               = 0
-    cidr_blocks           = ["0.0.0.0/0"]
-  }
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
 }
-
-# Create security group for connector
-resource "aws_security_group" "connector_sg" {                                 
-  name                    = "${var.app_name}-connector-sg"
-  vpc_id                  = aws_vpc.default.id
-
-  egress {
-    protocol              = "-1"
-    from_port             = 0
-    to_port               = 0
-    cidr_blocks           = ["0.0.0.0/0"]
-  }
-
-  # (Optional) Minimum egress rules
-  #egress {
-  #  protocol              = "tcp"
-  #  from_port             = 443
-  #  to_port               = 443
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-
-  #egress {
-  #  protocol              = "tcp"
-  #  from_port             = 30000
-  #  to_port               = 31000
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-
-  #egress {
-  #  protocol              = "udp"
-  #  from_port             = 0
-  #  to_port               = 65535
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-
-  # (Optional) The following egress rules are included for the purposes of this demo
-  #egress {
-  #  protocol              = "icmp"
-  #  from_port             = 8
-  #  to_port               = 0
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-
-  #egress {
-  #  protocol              = "tcp"
-  #  from_port             = 22
-  #  to_port               = 22
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-
-  #egress {
-  #  protocol              = "tcp"
-  #  from_port             = 80
-  #  to_port               = 80
-  #  cidr_blocks           = ["0.0.0.0/0"]
-  #}
-}
-
-# Create security group for private resource
-resource "aws_security_group" "resource_sg" {                                 
-  name                    = "${var.app_name}-resource-sg"
-  vpc_id                  = aws_vpc.default.id
-
-  ingress {
-    protocol              = "-1"
-    from_port             = 0
-    to_port               = 0
-    cidr_blocks           = ["0.0.0.0/0"]
-  }
-
-  egress {
-    protocol              = "-1"
-    from_port             = 0
-    to_port               = 0
-    cidr_blocks           = ["0.0.0.0/0"]
-  }
-}
-
-##############################################################
-#
-# Route 53 - Private Hosted Zone & DNS
-#
-##############################################################
-
-# Create the private hosted zone
-resource "aws_route53_zone" "private_zone" {
-  name = "tg-tf-demo.int"
-  vpc {
-    vpc_id = aws_vpc.default.id
-  }
-  comment = "Private hosted zone for tg-tf-demo.int"
-}
-
-# Create a DNS record in the private hosted zone
-resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.private_zone.zone_id
-  name    = "tg-tf-demo.int"
-  type    = "A"
-  ttl     = "300"
-  records = [aws_instance.private_resource.private_ip]  # Replace with your private IP address
-}
-
-# Output private zone id
-output "private_zone_id" {
-  value = aws_route53_zone.private_zone.zone_id
-}
-
-# Output DNS Record
-output "dns_record" {
-  value = aws_route53_record.www.fqdn
-}
-
-#Using the AWS Management Console:
-  #Go to the VPC Dashboard in the AWS Management Console.
-  #Select Peering Connections from the left-hand menu.
-  #Locate the peering connection that was created by Terraform. It should have a status of Pending Acceptance.
-  #Select the connection, then click on Actions and choose Accept Request.
-  #Follow the prompts to accept the peering request.

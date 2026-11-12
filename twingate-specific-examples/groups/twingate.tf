@@ -1,118 +1,84 @@
 ##############################################################
 #
-# Terraform providers
+# Remote Network (shared by the examples below)
 #
 ##############################################################
 
-# Set required providers
-terraform {
-  required_providers {
-    twingate = {
-      source  = "twingate/twingate"
-      version = "2.0.0"
+resource "twingate_remote_network" "this" {
+  name = "${var.name_prefix} - Network"
+}
+
+##############################################################
+#
+# Example 1 - Grant access to every group SCIM-synced from an
+#             IdP, looked up with the twingate_groups data source
+#
+##############################################################
+
+data "twingate_groups" "synced" {
+  types = ["SYNCED"]
+}
+
+resource "twingate_resource" "synced_groups" {
+  name              = "${var.name_prefix} - Synced Groups"
+  address           = "synced.internal.int"
+  remote_network_id = twingate_remote_network.this.id
+
+  dynamic "access_group" {
+    for_each = toset(data.twingate_groups.synced.groups[*].id)
+    content {
+      group_id = access_group.value
     }
   }
 }
 
-# Configure Twingate Provider
-provider "twingate" {
-  api_token   = var.tg_api_token
-  network     = var.tg_network
-}
-
 ##############################################################
 #
-# Remote Network
+# Example 2 - Grant access to group IDs passed in as a variable
+#             (set tg_group_ids in terraform.tfvars)
 #
 ##############################################################
 
-resource "twingate_remote_network" "aws_network" {
-    name = "aws_remote_network"
-}
+resource "twingate_resource" "group_ids" {
+  name              = "${var.name_prefix} - Group IDs"
+  address           = "ids.internal.int"
+  remote_network_id = twingate_remote_network.this.id
 
-
-
-
-##############################################################
-#
-# Example 1 - You SCIM groups from an IdP to Twingate and want
-#             to pull groups using a data source
-#
-##############################################################
-
-data "twingate_groups" "all-groups" {
-    # filters to be applied
-    type = "SYNCED"
-}
-
-output "all-groups-ids" {
-    value = [for group in data.twingate_groups.all-groups.groups : group.id]
-}
-
-resource "twingate_resource" "resource" {
-    name = "network"
-    address = "internal.int"
-    remote_network_id = twingate_remote_network.aws_network.id
-
-    access {
-        group_ids = [for group in data.twingate_groups.all-groups.groups : group.id]
+  dynamic "access_group" {
+    for_each = var.tg_group_ids
+    content {
+      group_id = access_group.value
     }
-}
-##############################################################
-#
-# Example 2 - Hardcode group ids to a resource
-#
-##############################################################
-
-resource "twingate_resource" "resource" {
-    name = "network"
-    address = "internal.int"
-    remote_network_id = twingate_remote_network.aws_network.id
-
-    access {
-        group_ids = ["R3JvdXAXXXXXXX1", "R3JvdXAXXXXXXX2", "R3JvdXAXXXXXXX3", "R3JvdXAXXXXXXX4"]
-    }
+  }
 }
 
 ##############################################################
 #
-# Example 3 - Pull a list of groups from variables.tf &
-#             store sensitive info in terraform.tfvars
+# Example 3 - Create users by email, put them in a new group,
+#             and grant that group access
+#
+# Creating a twingate_user sends the user an invitation email.
 #
 ##############################################################
 
-resource "twingate_resource" "resource" {
-    name = "network"
-    address = "internal.int"
-    remote_network_id = twingate_remote_network.aws_network.id
+resource "twingate_user" "by_email" {
+  for_each = var.tg_users_email
 
-    access {
-        group_ids = var.tg_group_ids
-    }
+  email = each.value
+  role  = "MEMBER"
 }
 
-##############################################################
-#
-# Example 4 - Add a list of users (by email) to a new
-#             group in Twingate
-#
-##############################################################
-
-# create users from list in variables.tf
-resource "twingate_user" "tg_users_email" {
-    for_each = toset(var.tg_users_email)
-    email = "${each.value}"
-    role = "MEMBER"
-    send_invite = true
+resource "twingate_group" "by_email" {
+  name     = "${var.name_prefix} - Email Users"
+  user_ids = [for u in twingate_user.by_email : u.id]
 }
 
-# (Optional) - output ids after user creation
-output "tg_users_email_output" {
-    value = values(twingate_user.tg_users_email)[*].id
-}
+resource "twingate_resource" "email_group" {
+  name              = "${var.name_prefix} - Email Group"
+  address           = "email.internal.int"
+  remote_network_id = twingate_remote_network.this.id
 
-# create a new group and add all the users in via their recently created ids
-resource "twingate_group" "tg_users_email_group" {
-    name = "GroupA"
-    user_ids = values(twingate_user.tg_users_email)[*].id
+  access_group {
+    group_id = twingate_group.by_email.id
+  }
 }

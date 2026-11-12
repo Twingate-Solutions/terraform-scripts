@@ -1,0 +1,6 @@
+.git
+**/.terraform
+claudedocs
+*.tfstate
+*.tfstate.*
+*.png

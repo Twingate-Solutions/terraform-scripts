@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only tg_network is required.
+# Prefer `export TWINGATE_API_TOKEN=...` over setting tg_api_token here.
+
+# General
+app_name        = "tg-tf-demo"
+app_environment = "demo"
+
+# AWS
+aws_region                  = "us-east-1"
+aws_vpc_cidr_block          = "10.39.0.0/16"
+aws_az_count                = 2 # EKS needs at least 2
+aws_eks_kubernetes_version  = "1.36"
+aws_eks_node_instance_type  = "t3.small"
+aws_eks_node_count          = 2
+aws_eks_public_access_cidrs = ["0.0.0.0/0"] # OPEN TO THE INTERNET: set your egress IP/CIDR (must include where Terraform runs), e.g. ["203.0.113.10/32"]
+aws_eks_namespace           = "twingate-demo"
+
+# Twingate
+tg_network            = "<tenant>" # <tenant>.twingate.com
+tg_connector_count    = 2          # one Helm release each
+tg_connector_image    = "twingate/connector:1"
+tg_helm_chart_version = "0.1.35"
+tg_users              = [] # ["VXNlcjoxMjM0NQ=="] from <tenant>.twingate.com/users/<id>
+tg_existing_group_ids = [] # ["R3JvdXA6MTIzNDU="]
+
+tg_security_policy_name   = null  # existing policy name, or null for the Default Policy
+tg_autolock_duration      = "30d" # null disables the auto-lock access policy
+tg_create_service_account = false
+
+tg_log_analytics_version = "v2" # v1 or v2
+tg_log_level             = "3" # 3 error, 4 warning, 6 info, 7 debug
