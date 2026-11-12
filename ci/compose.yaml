@@ -1,0 +1,27 @@
+# Local clean-room validation. Run from the repo root:
+#   docker compose -f ci/compose.yaml run --rm validate              # all modules
+#   docker compose -f ci/compose.yaml run --rm validate aws/ec2      # one module
+#   docker compose -f ci/compose.yaml run --rm fmt                   # rewrite formatting in place
+
+services:
+  validate:
+    build:
+      context: ..
+      dockerfile: ci/Dockerfile
+    image: tg-terraform-scripts-ci:local
+    volumes:
+      - ..:/src:ro
+      - plugin-cache:/plugin-cache
+
+  fmt:
+    image: tg-terraform-scripts-ci:local
+    build:
+      context: ..
+      dockerfile: ci/Dockerfile
+    entrypoint: ["terraform", "fmt", "-recursive"]
+    volumes:
+      - ..:/src
+      - plugin-cache:/plugin-cache
+
+volumes:
+  plugin-cache:

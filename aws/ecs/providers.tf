@@ -1,37 +1,45 @@
 ##############################################################
 #
-# Terraform providers
+# Terraform & Providers
 #
 ##############################################################
 
-# Set required providers
 terraform {
+  required_version = ">= 1.9"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
     twingate = {
       source  = "twingate/twingate"
-      version = "3.0.4"
+      version = "~> 5.2"
     }
   }
 }
 
-# Configure the AWS Provider
-provider "aws" {
-  region      = var.aws_region
+locals {
+  deployment = "AWS ECS"
 
-  // Uncomment if you prefer to NOT copy/paste in the form of (export AWS_ACCESS_KEY_ID="<SOMEVALUE>") to the terminal
-  /*
-  access_key = var.aws_access_key_id        // AWS access key
-  secret_key = var.aws_secret_access_key    // AWS secret key
-  token = var.aws_session_token             // temporary AWS session token
-  */
+  common_tags = {
+    Application = var.app_name
+    Environment = var.app_environment
+    ManagedBy   = "terraform"
+  }
 }
 
-# Configure Twingate Provider
+# AWS credentials come from the standard chain (env vars, ~/.aws profile, SSO)
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
+
+# api_token falls back to the TWINGATE_API_TOKEN environment variable when null
 provider "twingate" {
-  api_token   = var.tg_api_token
-  network     = var.tg_network
+  api_token = var.tg_api_token
+  network   = var.tg_network
 }

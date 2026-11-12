@@ -1,0 +1,35 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only tg_network is required.
+# Prefer `export TWINGATE_API_TOKEN=...` over setting tg_api_token here.
+
+# General
+app_name        = "tg-tf-demo"
+app_environment = "demo"
+
+# Azure
+azure_subscription_id        = null # null = ARM_SUBSCRIPTION_ID, then the az CLI default subscription
+azure_location               = "eastus"
+azure_vnet_cidr_block        = "10.45.0.0/16"
+azure_zones                  = ["1", "2", "3"] # [] for regions without availability zones
+azure_aks_kubernetes_version = null            # null = AKS default version
+azure_aks_node_count         = 2
+azure_aks_node_vm_size       = "Standard_D2s_v5"
+azure_aks_namespace          = "tg-tf-demo"
+
+# [] = API server reachable from any IP. Set to restrict it; must include where Terraform runs.
+# The NAT egress IP is added automatically. e.g. ["203.0.113.10/32"]
+azure_aks_api_authorized_ip_ranges = []
+
+# Twingate
+tg_network            = "<tenant>" # <tenant>.twingate.com
+tg_connector_count    = 2
+tg_connector_image    = "twingate/connector:1"
+tg_helm_chart_version = "0.1.35" # null = latest chart at apply time
+tg_users              = []       # ["VXNlcjoxMjM0NQ=="] from <tenant>.twingate.com/users/<id>
+tg_existing_group_ids = []       # ["R3JvdXA6MTIzNDU="]
+
+tg_security_policy_name   = null  # existing policy name, or null for the Default Policy
+tg_autolock_duration      = "30d" # null disables the auto-lock access policy
+tg_create_service_account = false
+
+tg_log_analytics_version = "v2" # v1 or v2
+tg_log_level             = "3"  # 3, 4, 6 or 7 (debug)

@@ -1,0 +1,57 @@
+# Credential-free validation of every Terraform module.
+# Same image and script as local runs: docker compose -f ci/compose.yaml run --rm validate
+
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    # Pinned: tooling runs in ci/Dockerfile, but the host supplies Docker/BuildKit.
+    # Re-test before moving to ubuntu-26.04 (ubuntu-latest's new default).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Weekly key: ~> constraints pick up new minor releases without providers.tf changing
+      - name: Cache key
+        id: cache-key
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Terraform providers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/plugin-cache
+          key: tf-plugins-${{ steps.cache-key.outputs.week }}-${{ hashFiles('**/providers.tf') }}
+          restore-keys: tf-plugins-
+
+      - name: Build validation image
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          DOCKER_BUILDKIT=1 docker build \
+            --secret id=github_token,env=GITHUB_TOKEN \
+            -f ci/Dockerfile -t tg-terraform-scripts-ci:ci .
+
+      - name: Validate all modules
+        run: |
+          mkdir -p "${{ runner.temp }}/plugin-cache"
+          docker run --rm \
+            -v "${{ github.workspace }}:/src:ro" \
+            -v "${{ runner.temp }}/plugin-cache:/plugin-cache" \
+            tg-terraform-scripts-ci:ci

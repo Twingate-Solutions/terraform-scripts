@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only tg_network is required.
+# Prefer `export TWINGATE_API_TOKEN=...` over setting tg_api_token here.
+
+tg_network  = "<tenant>" # <tenant>.twingate.com
+name_prefix = "TF Groups Example"
+
+# Example 2: existing group IDs (from <tenant>.twingate.com/groups/<id>)
+tg_group_ids = [] # ["R3JvdXA6MTIzNDU=", "R3JvdXA6Njc4OTA="]
+
+# Example 3: users to create; each receives an invitation email
+tg_users_email = [] # ["user1@example.com", "user2@example.com"]
